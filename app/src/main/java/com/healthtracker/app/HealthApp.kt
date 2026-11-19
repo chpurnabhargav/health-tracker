@@ -14,8 +14,8 @@ import kotlinx.coroutines.launch
 
 class AppContainer(app: Application) {
     val db: AppDatabase = AppDatabase.create(app)
-    val settings = SettingsRepository(app)
-    val repo = HealthRepository(db.dao(), settings)
+    val settings = SettingsRepository(app) { com.healthtracker.app.widget.HealthWidget.refresh(app) }
+    val repo = HealthRepository(db.dao(), settings) { com.healthtracker.app.widget.HealthWidget.refresh(app) }
     val health = HealthConnectManager(app)
 }
 
@@ -28,6 +28,8 @@ class HealthApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // The motivation photo feature was removed; clean up a photo saved by an older version.
+        java.io.File(filesDir, "motivation.jpg").delete()
         Notifications.createChannels(this)
         appScope.launch {
             ReminderScheduler.scheduleAll(this@HealthApp, container.settings.current())

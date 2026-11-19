@@ -22,6 +22,7 @@ class ReminderReceiver : BroadcastReceiver() {
         const val ACTION_SNOOZE_WATER = "com.healthtracker.app.SNOOZE_WATER"
         const val ACTION_SKIP_WATER = "com.healthtracker.app.SKIP_WATER"
         const val EXTRA_ML = "ml"
+        const val EXTRA_FROM_WIDGET = "from_widget"
         const val EXTRA_TYPE = "type"
     }
 
@@ -45,7 +46,9 @@ class ReminderReceiver : BroadcastReceiver() {
                 val ml = intent.getIntExtra(EXTRA_ML, s.glassMl).coerceIn(50, 2000)
                 c.repo.addWater(ml)
                 val total = c.repo.waterToday()
-                if (total >= s.waterGoalMl) Notifications.waterDone(ctx, s.waterGoalMl)
+                if (intent.getBooleanExtra(EXTRA_FROM_WIDGET, false)) {
+                    if (total >= s.waterGoalMl) Notifications.waterDone(ctx, s.waterGoalMl)
+                } else if (total >= s.waterGoalMl) Notifications.waterDone(ctx, s.waterGoalMl)
                 else Notifications.waterLogged(ctx, ml, total, s.waterGoalMl)
             }
 
@@ -110,6 +113,7 @@ class ReminderReceiver : BroadcastReceiver() {
                     ReminderScheduler.T_WEEKLY -> Notifications.weekly(ctx)
                 }
                 ReminderScheduler.scheduleAll(ctx, s)
+                com.healthtracker.app.widget.HealthWidget.refresh(ctx)
             }
         }
     }
@@ -122,6 +126,7 @@ class BootReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 ReminderScheduler.scheduleAll(ctx, ctx.container.settings.current())
+                com.healthtracker.app.widget.HealthWidget.refresh(ctx)
             } finally {
                 pending.finish()
             }

@@ -3,4 +3,7 @@
     <string name="app_name">Health Tracker</string>
     <string name="pause_service_label">Health Tracker food-app pause</string>
     <string name="pause_service_description">Shows a short pause screen when you open a food delivery app you chose (like Swiggy or Zomato). It only checks which app is opening. It never reads what is on your screen, and nothing leaves your phone.</string>
+    <string name="widget_description">Water glass, birthday countdown and a one-tap Drank button</string>
+    <string name="widget_glass_description">Water glass showing how much you have drunk today</string>
+    <string name="widget_water_label">WATER TODAY</string>
 </resources>

@@ -70,6 +70,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.Color
@@ -80,7 +82,7 @@ import java.time.ZonedDateTime
 import kotlin.math.abs
 
 @Composable
-fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) -> Unit) {
+fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) -> Unit, onSos: () -> Unit = {}) {
     val st by vm.state.collectAsStateWithLifecycle()
     val h = st ?: return
     val s = h.s
@@ -133,6 +135,7 @@ fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) 
         }
 
         GoalCard(h, onOpenTab)
+        SosCard(h.s.cravingWins, onSos)
         MinimumDayCard(h, vm)
         WeightCard(h, vm, onOpenTab)
         CaloriesCard(h, onAddFood, onOpenTab)
@@ -206,6 +209,36 @@ private fun GoalCard(h: HealthState, onOpenTab: (String) -> Unit) {
         }
     }
 }
+
+@Composable
+private fun SosCard(wins: Int, onSos: () -> Unit) {
+    val c = App.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFF3A1A0A), Color(0xFF2A0A1A))))
+            .border(1.dp, androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(c.amber.copy(alpha = 0.7f), c.coral.copy(alpha = 0.4f))), androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+            .androidxClickable(onSos)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(Icons.Rounded.Bolt, contentDescription = null, tint = c.amber, modifier = Modifier.size(28.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("Craving something?", style = MaterialTheme.typography.titleMedium, color = c.ink)
+            Text(
+                if (wins > 0) "5-minute SOS · $wins ${if (wins == 1) "craving" else "cravings"} beaten so far" else "Do the 5-minute SOS before you decide",
+                style = MaterialTheme.typography.bodySmall, color = c.ink2,
+            )
+        }
+        Text("SOS", style = MaterialTheme.typography.titleMedium, color = c.onPrimary,
+            modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50)).background(c.amber).padding(horizontal = 16.dp, vertical = 8.dp))
+    }
+}
+
+private fun Modifier.androidxClickable(onClick: () -> Unit): Modifier =
+    this.then(Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick))
 
 @Composable
 private fun Chip(text: String, color: Color) {

@@ -2,7 +2,6 @@ package com.healthtracker.app.pause
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -19,7 +18,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,11 +63,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -89,7 +85,6 @@ import com.healthtracker.app.ui.theme.Brushes
 import com.healthtracker.app.ui.theme.HealthTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
@@ -107,10 +102,8 @@ data class PauseInfo(
     val continuesToday: Int = 0,
     val moneySaved: Int = 0,
     val kcalLeft: Int? = null,
-    val photoPath: String? = null,
+    val scheduleLine: String? = null,
 )
-
-fun motivationPhoto(ctx: Context): File = File(ctx.filesDir, "motivation.jpg")
 
 class PauseActivity : ComponentActivity() {
 
@@ -153,6 +146,7 @@ class PauseActivity : ComponentActivity() {
                     preview = preview,
                     onClose = ::close,
                     onContinue = { order, planned -> proceed(order, planned) },
+                    onSos = ::openSos,
                 )
             }
         }
@@ -167,6 +161,24 @@ class PauseActivity : ComponentActivity() {
             runCatching {
                 startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
+        }
+        finish()
+    }
+
+    /** Counts as backing out, then opens the Craving SOS routine in the app. */
+    private fun openSos() {
+        if (!isPreview) {
+            val app = application as HealthApp
+            val p = pkg
+            val n = appName
+            app.appScope.launch { app.container.repo.logPause(p, n, "closed") }
+        }
+        runCatching {
+            startActivity(
+                Intent(this, com.healthtracker.app.MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    .putExtra(com.healthtracker.app.reminders.Notifications.EXTRA_TAB, "sos")
+            )
         }
         finish()
     }
@@ -205,6 +217,7 @@ suspend fun loadPauseInfo(ctx: Context): PauseInfo {
     val msg = s.pauseMessage
     val parts = msg.split(", ", limit = 2)
     val auto = s.customPauseMessage.isNullOrBlank() && parts.size == 2
+    val mode = PauseRules.effectiveMode(s, java.time.LocalDateTime.now())
     return PauseInfo(
         headline = if (auto) parts[0] + "." else msg,
         sub = if (auto) parts[1].replaceFirstChar { it.uppercase() } else null,
@@ -212,13 +225,13 @@ suspend fun loadPauseInfo(ctx: Context): PauseInfo {
         goalLine = if (s.goalName == "your birthday") "Birthday goal ${Fmt.kg(s.goalKg)} kg" else "${s.goalName} · ${Fmt.kg(s.goalKg)} kg",
         lostLine = if (lost >= 0.1) "You've lost ${Fmt.kg(lost)} kg so far." else "Every day you skip this counts.",
         monthLine = if (monthPauses.isNotEmpty()) "This month you closed this screen $closed of ${monthPauses.size} times." else null,
-        waitSec = PauseRules.waitSeconds(s.pauseMode, s.pauseWaitSec.coerceIn(3, 60), continuesToday),
+        waitSec = PauseRules.waitSeconds(mode, s.pauseWaitSec.coerceIn(3, 60), continuesToday),
         plannedLeft = (s.plannedMealsPerWeek - plannedUsed).coerceAtLeast(0),
-        mode = s.pauseMode,
+        mode = mode,
         continuesToday = continuesToday,
         moneySaved = PauseRules.moneySaved(all.count { it.outcome == "closed" }, s.orderValue),
         kcalLeft = Calc.calorieTarget(s, today) - eaten,
-        photoPath = motivationPhoto(ctx).takeIf { it.exists() }?.path,
+        scheduleLine = PauseRules.scheduleLine(s, java.time.LocalDateTime.now()),
     )
 }
 
@@ -233,6 +246,7 @@ fun PauseContent(
     preview: Boolean,
     onClose: () -> Unit,
     onContinue: (PauseRules.OrderSize?, Boolean) -> Unit,
+    onSos: (() -> Unit)? = null,
 ) {
     val c = App.colors
     val haptic = LocalHapticFeedback.current
@@ -266,10 +280,13 @@ fun PauseContent(
                     style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f),
                 )
             }
+            i.scheduleLine?.let {
+                Text(it, style = MaterialTheme.typography.labelLarge, color = c.amber)
+            }
             AnimatedContent(step, transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(200)) }, label = "step") { st ->
                 when (st) {
                     Step.MAIN -> MainStep(
-                        i, appName, preview, left, onClose,
+                        i, appName, preview, left, onClose, onSos,
                         onPlanned = { planned = true; step = Step.ORDER },
                         onContinue = {
                             when {
@@ -294,6 +311,7 @@ private fun MainStep(
     preview: Boolean,
     left: Int,
     onClose: () -> Unit,
+    onSos: (() -> Unit)?,
     onPlanned: () -> Unit,
     onContinue: () -> Unit,
 ) {
@@ -307,24 +325,6 @@ private fun MainStep(
         ) {
             Text(i.headline, style = MaterialTheme.typography.displayMedium, color = Color.White)
             if (i.sub != null) Text(i.sub, style = MaterialTheme.typography.headlineSmall, color = Color(0xFFFFB3C1))
-        }
-        i.photoPath?.let { path ->
-            val bmp = remember(path) {
-                runCatching {
-                    val o = BitmapFactory.Options().apply { inSampleSize = 2 }
-                    BitmapFactory.decodeFile(path, o)?.asImageBitmap()
-                }.getOrNull()
-            }
-            if (bmp != null) {
-                Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(24.dp))) {
-                    Image(bmp, contentDescription = "Your motivation photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
-                    Text(
-                        "Remember why you started.", style = MaterialTheme.typography.titleMedium, color = Color.White,
-                        modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
-                    )
-                }
-            }
         }
         if (i.daysLeft != null && i.daysLeft >= 0) {
             Row(
@@ -353,7 +353,7 @@ private fun MainStep(
                 }
                 Text(
                     when {
-                        i.mode == PauseMode.LOCKDOWN -> "Lockdown is on. Only a planned meal, or an emergency unlock after this wait."
+                        i.mode == PauseMode.LOCKDOWN -> (i.scheduleLine?.let { "$it. " } ?: "Lockdown is on. ") + "Only a planned meal, or an emergency unlock after this wait."
                         i.continuesToday > 0 -> "You've already ordered ${i.continuesToday}× today, so the wait is longer."
                         else -> "Take a breath. Drink a glass of water while you wait."
                     },
@@ -362,6 +362,9 @@ private fun MainStep(
             }
         }
         PrimaryButton(if (preview) "Close preview" else "Close $appName", onClick = onClose)
+        if (onSos != null) {
+            SecondaryButton("Craving? Do the 5-minute SOS", onClick = onSos, contentColor = c.amber, borderColor = c.amber.copy(alpha = 0.6f))
+        }
         if (i.plannedLeft > 0 && left == 0) {
             SecondaryButton("Use this week's planned meal", onClick = onPlanned, contentColor = Color.White)
         }

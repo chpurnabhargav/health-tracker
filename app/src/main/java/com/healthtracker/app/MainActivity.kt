@@ -139,6 +139,7 @@ private fun MainScaffold(vm: HealthViewModel, requestedTab: MutableState<String?
     LaunchedEffect(requestedTab.value) {
         val t = requestedTab.value
         if (t != null && tabs.any { it.route == t }) nav.goTab(t)
+        if (t == "sos") nav.navigate("sos") { launchSingleTop = true }
         requestedTab.value = null
     }
     LaunchedEffect(message) {
@@ -151,12 +152,15 @@ private fun MainScaffold(vm: HealthViewModel, requestedTab: MutableState<String?
         containerColor = c.bg,
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            if (route != "addfood") FloatingNav(route) { nav.goTab(it) }
+            if (route != "addfood" && route != "sos") FloatingNav(route) { nav.goTab(it) }
         },
     ) { padding ->
         com.healthtracker.app.ui.components.AuroraBackground(listOf(c.data, c.water, c.primary))
         NavHost(nav, startDestination = "today", modifier = Modifier.padding(padding)) {
-            composable("today") { TodayScreen(vm, onAddFood = { nav.navigate("addfood") }, onOpenTab = { nav.goTab(it) }) }
+            composable("today") {
+                TodayScreen(vm, onAddFood = { nav.navigate("addfood") }, onOpenTab = { nav.goTab(it) }, onSos = { nav.navigate("sos") })
+            }
+            composable("sos") { com.healthtracker.app.ui.screens.SosScreen(vm, onDone = { if (!nav.popBackStack()) nav.goTab("today") }) }
             composable("weight") { WeightScreen(vm) }
             composable("food") { FoodScreen(vm, onAddFood = { nav.navigate("addfood") }) }
             composable("review") { ReviewScreen(vm) }

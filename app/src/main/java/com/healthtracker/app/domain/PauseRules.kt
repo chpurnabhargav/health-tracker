@@ -1,6 +1,9 @@
 package com.healthtracker.app.domain
 
 import com.healthtracker.app.data.PauseMode
+import com.healthtracker.app.data.UserSettings
+import java.time.DayOfWeek
+import java.time.LocalDateTime
 
 /** The rules for how hard the food-app pause makes it to continue. */
 object PauseRules {
@@ -31,6 +34,33 @@ object PauseRules {
         text.lowercase().map { if (it.isLetter()) it else ' ' }.joinToString("").split(' ').filter { it.isNotBlank() }.joinToString(" ")
 
     fun promiseMatches(typed: String): Boolean = normalize(typed) == normalize(PROMISE)
+
+    /** True when [minute] (minute of day) is inside a window that may run past midnight. */
+    fun inWindow(minute: Int, start: Int, end: Int): Boolean = when {
+        start == end -> false
+        start < end -> minute in start until end
+        else -> minute >= start || minute < end
+    }
+
+    private fun isWeekend(d: DayOfWeek) = d == DayOfWeek.SATURDAY || d == DayOfWeek.SUNDAY
+
+    /** Whether the automatic lockdown schedule is active right now. */
+    fun scheduledLockdown(s: UserSettings, now: LocalDateTime): Boolean {
+        if (!s.nightLockdown) return false
+        if (s.weekendLockdown && isWeekend(now.dayOfWeek)) return true
+        return inWindow(now.hour * 60 + now.minute, s.lockStartMin, s.lockEndMin)
+    }
+
+    /** The mode that applies right now: the schedule can only make it stricter. */
+    fun effectiveMode(s: UserSettings, now: LocalDateTime): PauseMode =
+        if (scheduledLockdown(s, now)) PauseMode.LOCKDOWN else s.pauseMode
+
+    /** A short line explaining an active schedule, like "Night lockdown until 6:00 AM". */
+    fun scheduleLine(s: UserSettings, now: LocalDateTime): String? {
+        if (!scheduledLockdown(s, now)) return null
+        if (s.weekendLockdown && isWeekend(now.dayOfWeek)) return "Weekend lockdown until Monday"
+        return "Night lockdown until ${Fmt.clock(s.lockEndMin)}"
+    }
 
     /** Rupees kept by backing out, using the person's usual order value. */
     fun moneySaved(closedCount: Int, orderValue: Int): Int = closedCount * orderValue

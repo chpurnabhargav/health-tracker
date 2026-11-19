@@ -70,7 +70,7 @@ import java.time.LocalDate
 
 private enum class Edit {
     NAME, BIRTHDAY, SEX, HEIGHT, START, ACTIVITY, PACE, GOAL_KG, GOAL_NAME, GOAL_DATE, CALORIES,
-    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE, GLASS,
+    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE, GLASS, LOCK_START, LOCK_END,
 }
 
 @Composable
@@ -93,26 +93,6 @@ fun PlanScreen(vm: HealthViewModel) {
                 }
             }.isSuccess
             vm.showMessage(if (ok) "Backup saved." else "Couldn't save the backup.")
-        }
-    }
-    var photoVersion by remember { mutableStateOf(0) }
-    val hasPhoto = remember(photoVersion) { com.healthtracker.app.pause.motivationPhoto(ctx).exists() }
-    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) scope.launch {
-            val ok = withContext(Dispatchers.IO) {
-                runCatching {
-                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
-                    var sample = 1
-                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1600) sample *= 2
-                    val bmp = ctx.contentResolver.openInputStream(uri)?.use {
-                        android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
-                    } ?: error("unreadable")
-                    com.healthtracker.app.pause.motivationPhoto(ctx).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it) }
-                }.isSuccess
-            }
-            photoVersion++
-            vm.showMessage(if (ok) "Photo saved. It shows on your pause screen." else "Couldn't use that photo.")
         }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -228,16 +208,20 @@ fun PlanScreen(vm: HealthViewModel) {
             HairlineDivider()
             ValueRow("Strictness", s.pauseMode.label, sub = s.pauseMode.detail, onClick = { edit = Edit.MODE })
             HairlineDivider()
-            ValueRow("Your message", s.pauseMessage, onClick = { edit = Edit.MESSAGE })
-            HairlineDivider()
-            ValueRow(
-                "Motivation photo", if (hasPhoto) "Change" else "Add",
-                sub = if (hasPhoto) "Shown on the pause screen" else "A goal outfit, a trip, or anything that reminds you why",
-                onClick = { photoLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-            )
-            if (hasPhoto) {
-                androidx.compose.material3.TextButton(onClick = { com.healthtracker.app.pause.motivationPhoto(ctx).delete(); photoVersion++ }) { Text("Remove photo") }
+            ToggleRow(
+                "Night lockdown",
+                "Lockdown from ${Fmt.clock(s.lockStartMin)} to ${Fmt.clock(s.lockEndMin)}, whatever your strictness. Late nights are when most orders happen.",
+                s.nightLockdown,
+            ) { v -> vm.updateSettings { it.copy(nightLockdown = v) } }
+            if (s.nightLockdown) {
+                ValueRow("Starts", Fmt.clock(s.lockStartMin), onClick = { edit = Edit.LOCK_START })
+                ValueRow("Ends", Fmt.clock(s.lockEndMin), onClick = { edit = Edit.LOCK_END })
+                ToggleRow("Also all day on weekends", "Saturday and Sunday, until Monday morning", s.weekendLockdown) { v ->
+                    vm.updateSettings { it.copy(weekendLockdown = v) }
+                }
             }
+            HairlineDivider()
+            ValueRow("Your message", s.pauseMessage, onClick = { edit = Edit.MESSAGE })
             HairlineDivider()
             ValueRow("Usual order value", "₹${Fmt.int(s.orderValue)}", sub = "Each time you back out, this counts as money saved", onClick = { edit = Edit.ORDER_VALUE })
             HairlineDivider()
@@ -339,6 +323,8 @@ fun PlanScreen(vm: HealthViewModel) {
             help = "Leave it empty to use \"No ${s.displayName}, not till ${s.goalName}.\"",
             onDismiss = close,
         ) { v -> vm.updateSettings { it.copy(customPauseMessage = v.ifBlank { null }) }; close() }
+        Edit.LOCK_START -> TimeDialog("Lockdown starts", s.lockStartMin, onDismiss = close) { v -> vm.updateSettings { it.copy(lockStartMin = v) }; close() }
+        Edit.LOCK_END -> TimeDialog("Lockdown ends", s.lockEndMin, onDismiss = close) { v -> vm.updateSettings { it.copy(lockEndMin = v) }; close() }
         Edit.GLASS -> OptionsDialog("Glass size", listOf(150, 200, 250, 300, 350, 400, 500, 750, 1000), s.glassMl, { "$it ml" }, onDismiss = close) { v ->
             vm.updateSettings { it.copy(glassMl = v) }; close()
         }

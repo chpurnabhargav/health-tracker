@@ -143,6 +143,28 @@ class CalcTest {
     }
 
     @Test
+    fun nightLockdownWindowsCrossMidnight() {
+        val r = com.healthtracker.app.domain.PauseRules
+        assertTrue(r.inWindow(22 * 60, 21 * 60, 6 * 60))
+        assertTrue(r.inWindow(5 * 60 + 59, 21 * 60, 6 * 60))
+        assertTrue(!r.inWindow(6 * 60, 21 * 60, 6 * 60))
+        assertTrue(!r.inWindow(14 * 60, 21 * 60, 6 * 60))
+        assertTrue(r.inWindow(12 * 60, 9 * 60, 17 * 60))
+        assertTrue(!r.inWindow(12 * 60, 9 * 60, 9 * 60))
+
+        val s = UserSettings(onboarded = true, pauseMode = com.healthtracker.app.data.PauseMode.STRICT)
+        val thuAfternoon = java.time.LocalDateTime.of(2026, 11, 19, 14, 0)
+        val thuNight = java.time.LocalDateTime.of(2026, 11, 19, 23, 15)
+        val satAfternoon = java.time.LocalDateTime.of(2026, 11, 21, 14, 0)
+        assertEquals(com.healthtracker.app.data.PauseMode.STRICT, r.effectiveMode(s, thuAfternoon))
+        assertEquals(com.healthtracker.app.data.PauseMode.LOCKDOWN, r.effectiveMode(s, thuNight))
+        assertEquals("Night lockdown until 6:00 AM", r.scheduleLine(s, thuNight))
+        assertEquals(com.healthtracker.app.data.PauseMode.STRICT, r.effectiveMode(s, satAfternoon))
+        assertEquals(com.healthtracker.app.data.PauseMode.LOCKDOWN, r.effectiveMode(s.copy(weekendLockdown = true), satAfternoon))
+        assertEquals(com.healthtracker.app.data.PauseMode.STRICT, r.effectiveMode(s.copy(nightLockdown = false), thuNight))
+    }
+
+    @Test
     fun allowanceEndsWhenYouLeaveTheApp() {
         val g = com.healthtracker.app.pause.PauseGate
         g.allowSession("in.swiggy.android")

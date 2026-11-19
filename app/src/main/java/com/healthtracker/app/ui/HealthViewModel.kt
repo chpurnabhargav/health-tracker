@@ -111,6 +111,8 @@ class HealthViewModel(app: Application) : AndroidViewModel(app) {
     fun addCustomFood(name: String, serving: String, kcal: Int, p: Double, carbs: Double, fat: Double, junk: Boolean, servings: Double) =
         viewModelScope.launch { c.repo.addFood(name, servings, kcal, p, carbs, fat, junk, serving = serving) }
 
+    fun cravingBeaten() = updateSettings { it.copy(cravingWins = it.cravingWins + 1) }
+
     fun dismissRecalcNotice() = updateSettings { it.copy(recalcNotice = null) }
     fun dismissGoalResult() = updateSettings { it.copy(lastGoalResult = null) }
 

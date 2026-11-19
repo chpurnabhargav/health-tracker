@@ -28,8 +28,14 @@ Everything stays on the phone. There's no account, no server and no ads.
   - **Lockdown**: no ordering except your weekly planned meal or a 5-minute emergency unlock
 
   An allowance only lasts while you stay in that app. Switching apps or locking the phone ends it, and the
-  pause comes back when you unlock with a food app still open. The app warns you if the pause is switched off,
-  shows the money saved each time you back out, and can show a motivation photo
+  pause comes back when you unlock with a food app still open. The app warns you if the pause is switched off
+  and shows the money saved each time you back out
+- **Night lockdown**: the pause switches to Lockdown by itself during the hours you choose (9 PM to 6 AM by
+  default), and optionally all weekend
+- **Craving SOS**: a 5-minute guided routine (water, slow breathing, moving, mint) that ends with "Did the
+  craving pass?" and smart snacks under 200 kcal if you're really hungry. Open it from Today or straight from
+  the pause screen
+- **Home-screen widget**: the water glass, today's litres, the birthday countdown and a one-tap Drank button
 - **Water alerts**: a full-screen alert that wakes a locked phone, a 12-second card on top of whatever app
   you're using, and a high-priority notification with +250 ml and snooze buttons
 - **Built for consistency**: minimum-day mode, "never miss twice", weekly averages instead of daily

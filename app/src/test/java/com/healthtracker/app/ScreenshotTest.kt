@@ -184,11 +184,42 @@ class ScreenshotTest {
             mode = com.healthtracker.app.data.PauseMode.STRICT, continuesToday = 1, moneySaved = 3150, kcalLeft = 1004,
         )
         compose.mainClock.autoAdvance = false
-        compose.setContent { HealthTheme { PauseContent(info, "Swiggy", false, {}, { _, _ -> }) } }
+        compose.setContent { HealthTheme { PauseContent(info, "Swiggy", false, {}, { _, _ -> }, onSos = {}) } }
         compose.mainClock.advanceTimeBy(500)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/8-pause.png")
         compose.mainClock.advanceTimeBy(31_000)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/9-pause-unlocked.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xhdpi")
+    fun s12_sos() {
+        compose.setContent { HealthTheme { com.healthtracker.app.ui.screens.SosScreen(vm, onDone = {}) } }
+        compose.waitUntil(20_000) { vm.state.value != null }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/12-sos.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w412dp-h400dp-xhdpi")
+    fun s13_widget() {
+        compose.setContent {
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xFF2B3A55)).padding(16.dp)) {
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { ctx ->
+                        val rv = android.widget.RemoteViews(ctx.packageName, R.layout.widget_health)
+                        rv.setImageViewBitmap(R.id.widget_glass, com.healthtracker.app.widget.HealthWidget.glassBitmap(ctx, 0.5f))
+                        rv.setTextViewText(R.id.widget_amount, "1.75 / 3.5 L")
+                        rv.setTextViewText(R.id.widget_countdown, "47 days to your birthday")
+                        rv.setTextViewText(R.id.widget_drank, "+250")
+                        rv.apply(ctx, android.widget.FrameLayout(ctx))
+                    },
+                    modifier = Modifier.fillMaxSize().padding(vertical = 120.dp),
+                )
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/13-widget.png")
     }
 
     @Test

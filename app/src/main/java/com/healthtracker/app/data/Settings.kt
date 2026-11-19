@@ -88,6 +88,11 @@ data class UserSettings(
     val waterPopup: Boolean = true,
     val lastPauseOffWarnDay: Long? = null,
     val glassMl: Int = 250,
+    val nightLockdown: Boolean = true,
+    val lockStartMin: Int = 21 * 60,
+    val lockEndMin: Int = 6 * 60,
+    val weekendLockdown: Boolean = false,
+    val cravingWins: Int = 0,
 ) {
     val displayName: String get() = name.ifBlank { "friend" }
     val pauseMessage: String
@@ -137,9 +142,14 @@ private object K {
     val waterPopup = booleanPreferencesKey("water_popup")
     val lastPauseOffWarn = longPreferencesKey("last_pause_off_warn")
     val glassMl = intPreferencesKey("glass_ml")
+    val nightLockdown = booleanPreferencesKey("night_lockdown")
+    val lockStart = intPreferencesKey("lock_start_min")
+    val lockEnd = intPreferencesKey("lock_end_min")
+    val weekendLockdown = booleanPreferencesKey("weekend_lockdown")
+    val cravingWins = intPreferencesKey("craving_wins")
 }
 
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(private val context: Context, private val onChange: () -> Unit = {}) {
 
     val flow: Flow<UserSettings> = context.dataStore.data.map { p -> read(p) }
 
@@ -150,6 +160,7 @@ class SettingsRepository(private val context: Context) {
             val next = transform(read(p))
             write(p, next)
         }
+        onChange()
     }
 
     private fun read(p: Preferences): UserSettings {
@@ -194,6 +205,11 @@ class SettingsRepository(private val context: Context) {
             waterPopup = p[K.waterPopup] ?: d.waterPopup,
             lastPauseOffWarnDay = p[K.lastPauseOffWarn],
             glassMl = p[K.glassMl] ?: d.glassMl,
+            nightLockdown = p[K.nightLockdown] ?: d.nightLockdown,
+            lockStartMin = p[K.lockStart] ?: d.lockStartMin,
+            lockEndMin = p[K.lockEnd] ?: d.lockEndMin,
+            weekendLockdown = p[K.weekendLockdown] ?: d.weekendLockdown,
+            cravingWins = p[K.cravingWins] ?: d.cravingWins,
         )
     }
 
@@ -237,6 +253,11 @@ class SettingsRepository(private val context: Context) {
         p[K.waterPopup] = s.waterPopup
         p.setOrRemove(K.lastPauseOffWarn, s.lastPauseOffWarnDay)
         p[K.glassMl] = s.glassMl
+        p[K.nightLockdown] = s.nightLockdown
+        p[K.lockStart] = s.lockStartMin
+        p[K.lockEnd] = s.lockEndMin
+        p[K.weekendLockdown] = s.weekendLockdown
+        p[K.cravingWins] = s.cravingWins
     }
 
     private fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {

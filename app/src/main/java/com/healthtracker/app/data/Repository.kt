@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
-class HealthRepository(val dao: HealthDao, val settings: SettingsRepository) {
+class HealthRepository(val dao: HealthDao, val settings: SettingsRepository, private val onChange: () -> Unit = {}) {
 
     private fun now() = System.currentTimeMillis()
     private fun today() = LocalDate.now().toEpochDay()
@@ -15,6 +15,7 @@ class HealthRepository(val dao: HealthDao, val settings: SettingsRepository) {
     suspend fun logWeight(kg: Double, day: Long = today()) {
         dao.upsertWeight(WeightEntry(day, (kg * 10).roundToInt() / 10.0, now()))
         maintainGoals(LocalDate.now())
+        onChange()
     }
 
     suspend fun deleteWeight(day: Long) = dao.deleteWeight(day)
@@ -24,9 +25,15 @@ class HealthRepository(val dao: HealthDao, val settings: SettingsRepository) {
 
     suspend fun deleteWaist(day: Long) = dao.deleteWaist(day)
 
-    suspend fun addWater(ml: Int) = dao.insertWater(WaterEntry(day = today(), time = now(), ml = ml))
+    suspend fun addWater(ml: Int) {
+        dao.insertWater(WaterEntry(day = today(), time = now(), ml = ml))
+        onChange()
+    }
 
-    suspend fun undoWater() = dao.undoLastWater(today())
+    suspend fun undoWater() {
+        dao.undoLastWater(today())
+        onChange()
+    }
 
     suspend fun waterToday(): Int = dao.waterOn(today())
 
