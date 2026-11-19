@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
@@ -43,6 +45,16 @@
             android:launchMode="singleTask"
             android:taskAffinity="com.healthtracker.app.pause"
             android:theme="@style/Theme.HealthTracker.Pause" />
+
+        <activity
+            android:name=".reminders.WaterAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:taskAffinity="com.healthtracker.app.water"
+            android:theme="@style/Theme.HealthTracker.Pause"
+            android:turnScreenOn="true" />
 
         <activity
             android:name=".health.HealthRationaleActivity"

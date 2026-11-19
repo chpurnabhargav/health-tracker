@@ -1,23 +1,26 @@
 package com.healthtracker.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.healthtracker.app.R
 
 @Immutable
 data class AppColors(
     val bg: Color,
     val card: Color,
+    val card2: Color,
     val ink: Color,
     val ink2: Color,
     val hairline: Color,
@@ -31,6 +34,9 @@ data class AppColors(
     val data: Color,
     val over: Color,
     val aqua: Color,
+    val water: Color,
+    val coral: Color,
+    val amber: Color,
     val track: Color,
     val soft: Color,
     val good: Color,
@@ -40,70 +46,75 @@ data class AppColors(
     val isDark: Boolean,
 )
 
-val LightColors = AppColors(
-    bg = Color(0xFFF6F6F4), card = Color(0xFFFFFFFF), ink = Color(0xFF0B0B0B), ink2 = Color(0xFF52514E),
-    hairline = Color(0x1A0B0B0B), primary = Color(0xFF1C5CAB), onPrimary = Color(0xFFFFFFFF),
-    hero = Color(0xFF0D366B), onHero = Color(0xFFFFFFFF), heroMuted = Color(0xFFCDE2FB),
-    heroTrack = Color(0x33FFFFFF), heroFill = Color(0xFF9EC5F4),
-    data = Color(0xFF2A78D6), over = Color(0xFFEB6834), aqua = Color(0xFF1BAF7A),
-    track = Color(0xFFCDE2FB), soft = Color(0xFFEDF3FC), good = Color(0xFF006300),
-    dot = Color(0xFFA8A7A1), grid = Color(0xFFE8E7E1), axis = Color(0xFFC3C2B7), isDark = false,
+/** "Night neon": near-black ground, electric lime for actions, violet and cyan for data. */
+val NeonColors = AppColors(
+    bg = Color(0xFF07080D), card = Color(0xFF12141D), card2 = Color(0xFF191C28),
+    ink = Color(0xFFF5F6FA), ink2 = Color(0xFFA6ABBD), hairline = Color(0x17FFFFFF),
+    primary = Color(0xFFC8FF4D), onPrimary = Color(0xFF0B0D12),
+    hero = Color(0xFF1B1550), onHero = Color(0xFFFFFFFF), heroMuted = Color(0xFFCBC5FF),
+    heroTrack = Color(0x2EFFFFFF), heroFill = Color(0xFFC8FF4D),
+    data = Color(0xFF8E7CFF), over = Color(0xFFFF7A45), aqua = Color(0xFF3DE0B0),
+    water = Color(0xFF34D3F6), coral = Color(0xFFFF4D6D), amber = Color(0xFFFFB547),
+    track = Color(0xFF232738), soft = Color(0xFF1C2030), good = Color(0xFF4BE39B),
+    dot = Color(0xFF5A5F73), grid = Color(0xFF1E2130), axis = Color(0xFF30344A), isDark = true,
 )
 
-val DarkColors = AppColors(
-    bg = Color(0xFF0E0F11), card = Color(0xFF1A1B1E), ink = Color(0xFFF0EFEC), ink2 = Color(0xFFC3C2B7),
-    hairline = Color(0x1FFFFFFF), primary = Color(0xFF86B6EF), onPrimary = Color(0xFF0B1B30),
-    hero = Color(0xFF123F78), onHero = Color(0xFFFFFFFF), heroMuted = Color(0xFFCDE2FB),
-    heroTrack = Color(0x33FFFFFF), heroFill = Color(0xFF9EC5F4),
-    data = Color(0xFF3987E5), over = Color(0xFFD95926), aqua = Color(0xFF199E70),
-    track = Color(0xFF233A57), soft = Color(0xFF1E2A3A), good = Color(0xFF3FBF3F),
-    dot = Color(0xFF6E6D68), grid = Color(0xFF2C2C2A), axis = Color(0xFF45453F), isDark = true,
-)
-
-val LocalAppColors = staticCompositionLocalOf { LightColors }
+val LocalAppColors = staticCompositionLocalOf { NeonColors }
 
 object App {
     val colors: AppColors
         @Composable get() = LocalAppColors.current
 }
 
+object Brushes {
+    val hero = Brush.linearGradient(listOf(Color(0xFF2E2386), Color(0xFF161A4A), Color(0xFF0A3346)))
+    val lime = Brush.horizontalGradient(listOf(Color(0xFFC8FF4D), Color(0xFF7CF5C0)))
+    val violetCyan = Brush.horizontalGradient(listOf(Color(0xFF8E7CFF), Color(0xFF34D3F6)))
+    val danger = Brush.verticalGradient(listOf(Color(0xFF2A0612), Color(0xFF0A0508)))
+}
+
+val Display = FontFamily(
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_semibold, FontWeight.SemiBold),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+val Body = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold),
+)
+
 private val AppTypography = Typography(
-    displaySmall = TextStyle(fontSize = 52.sp, lineHeight = 56.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
-    headlineLarge = TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
-    headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.3).sp),
-    headlineSmall = TextStyle(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
-    titleLarge = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
-    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
-    labelSmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    displayLarge = TextStyle(fontFamily = Display, fontSize = 72.sp, lineHeight = 72.sp, fontWeight = FontWeight.Bold, letterSpacing = (-2).sp),
+    displayMedium = TextStyle(fontFamily = Display, fontSize = 60.sp, lineHeight = 62.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.5).sp),
+    displaySmall = TextStyle(fontFamily = Display, fontSize = 50.sp, lineHeight = 54.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
+    headlineLarge = TextStyle(fontFamily = Display, fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
+    headlineMedium = TextStyle(fontFamily = Display, fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.4).sp),
+    headlineSmall = TextStyle(fontFamily = Display, fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
+    titleLarge = TextStyle(fontFamily = Display, fontSize = 21.sp, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontFamily = Display, fontSize = 18.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
+    titleSmall = TextStyle(fontFamily = Body, fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontFamily = Body, fontSize = 16.sp, lineHeight = 23.sp),
+    bodyMedium = TextStyle(fontFamily = Body, fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = TextStyle(fontFamily = Body, fontSize = 13.sp, lineHeight = 18.sp),
+    labelLarge = TextStyle(fontFamily = Body, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontFamily = Body, fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    labelSmall = TextStyle(fontFamily = Body, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
 )
 
 @Composable
 fun HealthTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
-    val c = if (dark) DarkColors else LightColors
-    val scheme = if (dark) {
-        darkColorScheme(
-            primary = c.primary, onPrimary = c.onPrimary, background = c.bg, onBackground = c.ink,
-            surface = c.card, onSurface = c.ink, onSurfaceVariant = c.ink2, surfaceVariant = c.soft,
-            surfaceContainer = c.card, surfaceContainerHigh = c.card, surfaceContainerHighest = c.soft,
-            surfaceContainerLow = c.card, outline = c.axis, outlineVariant = c.hairline,
-            secondaryContainer = c.soft, onSecondaryContainer = c.ink, primaryContainer = c.soft, onPrimaryContainer = c.ink,
-        )
-    } else {
-        lightColorScheme(
-            primary = c.primary, onPrimary = c.onPrimary, background = c.bg, onBackground = c.ink,
-            surface = c.card, onSurface = c.ink, onSurfaceVariant = c.ink2, surfaceVariant = c.soft,
-            surfaceContainer = c.card, surfaceContainerHigh = c.card, surfaceContainerHighest = c.soft,
-            surfaceContainerLow = c.card, outline = c.axis, outlineVariant = c.hairline,
-            secondaryContainer = c.soft, onSecondaryContainer = c.ink, primaryContainer = c.soft, onPrimaryContainer = c.ink,
-        )
-    }
+    val c = NeonColors
+    val scheme = darkColorScheme(
+        primary = c.primary, onPrimary = c.onPrimary, background = c.bg, onBackground = c.ink,
+        surface = c.card, onSurface = c.ink, onSurfaceVariant = c.ink2, surfaceVariant = c.soft,
+        surfaceContainer = c.card, surfaceContainerHigh = c.card2, surfaceContainerHighest = c.soft,
+        surfaceContainerLow = c.card, surfaceContainerLowest = c.bg, outline = c.axis, outlineVariant = c.hairline,
+        secondaryContainer = c.soft, onSecondaryContainer = c.ink, primaryContainer = c.soft, onPrimaryContainer = c.ink,
+        error = c.coral,
+    )
     CompositionLocalProvider(LocalAppColors provides c) {
         MaterialTheme(colorScheme = scheme, typography = AppTypography, content = content)
     }

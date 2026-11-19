@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,8 +60,9 @@ data class SetupStatus(
     val healthAvailable: Boolean = false,
     val healthNeedsUpdate: Boolean = false,
     val health: Boolean = false,
+    val fullScreen: Boolean = false,
 ) {
-    val doneCount: Int get() = listOf(notifications, battery, pause, health).count { it }
+    val doneCount: Int get() = listOf(notifications, battery, pause, health, fullScreen).count { it }
 }
 
 private fun notificationsGranted(ctx: Context): Boolean =
@@ -88,6 +90,7 @@ fun SetupChecklist(modifier: Modifier = Modifier) {
                 healthAvailable = hc.isAvailable(),
                 healthNeedsUpdate = hc.needsUpdate(),
                 health = hc.hasPermissions(),
+                fullScreen = com.healthtracker.app.reminders.Notifications.canUseFullScreen(ctx),
             )
         }
     }
@@ -128,6 +131,20 @@ fun SetupChecklist(modifier: Modifier = Modifier) {
             runCatching {
                 ctx.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")))
             }.onFailure { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+        }
+        HairlineDivider()
+        SetupItem(
+            icon = Icons.Rounded.WaterDrop,
+            title = "Lock-screen water alerts",
+            sub = "Lets water reminders wake the screen and show full screen",
+            done = status.fullScreen,
+            action = "Allow",
+        ) {
+            if (Build.VERSION.SDK_INT >= 34) {
+                runCatching {
+                    ctx.startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${ctx.packageName}")))
+                }
+            }
         }
         HairlineDivider()
         SetupItem(

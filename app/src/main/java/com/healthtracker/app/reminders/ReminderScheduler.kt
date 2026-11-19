@@ -29,6 +29,11 @@ object ReminderScheduler {
         set(ctx, T_WEEKLY, if (on && s.weeklyRemind) nextWeekly(now) else null)
     }
 
+    /** Moves the next water reminder to [minutes] from now. */
+    fun snoozeWater(ctx: Context, minutes: Int) {
+        set(ctx, T_WATER, System.currentTimeMillis() + minutes * 60_000L)
+    }
+
     private fun pending(ctx: Context, type: Int): PendingIntent {
         val i = Intent(ctx, ReminderReceiver::class.java)
             .setAction(ReminderReceiver.ACTION_FIRE + type)

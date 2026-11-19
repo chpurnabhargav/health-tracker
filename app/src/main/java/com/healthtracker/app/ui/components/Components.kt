@@ -58,6 +58,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -70,12 +71,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.healthtracker.app.domain.Fmt
 import com.healthtracker.app.ui.theme.App
+import com.healthtracker.app.ui.theme.Brushes
+import androidx.compose.ui.graphics.Brush
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-val CardShape = RoundedCornerShape(20.dp)
-val ButtonShape = RoundedCornerShape(14.dp)
+val CardShape = RoundedCornerShape(24.dp)
+val ButtonShape = RoundedCornerShape(16.dp)
+
+private val CardBorder = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.16f), Color.White.copy(alpha = 0.03f)))
 
 @Composable
 fun AppCard(
@@ -83,15 +88,17 @@ fun AppCard(
     contentPadding: PaddingValues = PaddingValues(20.dp),
     onClick: (() -> Unit)? = null,
     spacing: Dp = 12.dp,
+    tilt: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val c = App.colors
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .then(if (tilt) Modifier.pressTilt(4f) else Modifier)
             .clip(CardShape)
-            .background(c.card)
-            .border(1.dp, c.hairline, CardShape)
+            .background(Brush.verticalGradient(listOf(c.card2, c.card)))
+            .border(1.dp, CardBorder, CardShape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(contentPadding),
         verticalArrangement = Arrangement.spacedBy(spacing),
@@ -105,8 +112,10 @@ fun HeroCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .pressTilt(4f)
             .clip(CardShape)
-            .background(c.hero)
+            .background(Brushes.hero)
+            .border(1.dp, Brush.linearGradient(listOf(c.data.copy(alpha = 0.7f), c.water.copy(alpha = 0.25f), Color.Transparent)), CardShape)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         content = content,
@@ -151,7 +160,7 @@ fun Meter(
     track: Color = App.colors.track,
     height: Dp = 8.dp,
 ) {
-    val f = fraction.coerceIn(0f, 1f)
+    val f by androidx.compose.animation.core.animateFloatAsState(fraction.coerceIn(0f, 1f), androidx.compose.animation.core.tween(900), label = "meter")
     Box(
         modifier
             .fillMaxWidth()
@@ -165,7 +174,7 @@ fun Meter(
                     .fillMaxWidth(f)
                     .height(height)
                     .clip(RoundedCornerShape(height / 2))
-                    .background(color)
+                    .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.65f), color)))
             )
         }
     }
@@ -181,15 +190,21 @@ fun Ring(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit = {},
 ) {
+    val f by androidx.compose.animation.core.animateFloatAsState(fraction.coerceIn(0f, 1f), androidx.compose.animation.core.tween(1100), label = "ring")
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
             val sw = stroke.toPx()
             val inset = sw / 2
             val arcSize = Size(this.size.width - sw, this.size.height - sw)
             drawArc(track, 0f, 360f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(sw))
-            val f = fraction.coerceIn(0f, 1f)
             if (f > 0f) {
-                drawArc(color, -90f, 360f * f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(sw, cap = StrokeCap.Round))
+                rotate(-90f) {
+                    drawArc(color.copy(alpha = 0.10f), 0f, 360f * f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(sw * 1.9f, cap = StrokeCap.Round))
+                    drawArc(
+                        Brush.sweepGradient(listOf(color.copy(alpha = 0.55f), color, color), center = Offset(this.size.width / 2, this.size.height / 2)),
+                        0f, 360f * f, false, topLeft = Offset(inset, inset), size = arcSize, style = Stroke(sw, cap = StrokeCap.Round),
+                    )
+                }
             }
         }
         content()
@@ -201,9 +216,10 @@ fun StatTile(label: String, value: String, sub: String?, modifier: Modifier = Mo
     val c = App.colors
     Column(
         modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(c.card)
-            .border(1.dp, c.hairline, RoundedCornerShape(16.dp))
+            .pressTilt(6f)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.verticalGradient(listOf(c.card2, c.card)))
+            .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -235,10 +251,14 @@ fun PrimaryButton(
     container: Color = App.colors.primary,
     content: Color = App.colors.onPrimary,
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Button(
-        onClick = onClick,
+        onClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove); onClick() },
         enabled = enabled,
-        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp),
+        modifier = modifier
+            .then(if (enabled && container == App.colors.primary) Modifier.glow(container, 14.dp, 16.dp, 0.35f) else Modifier)
+            .fillMaxWidth()
+            .heightIn(min = 54.dp),
         shape = ButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
     ) {
@@ -258,12 +278,12 @@ fun SecondaryButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     contentColor: Color = App.colors.ink,
-    borderColor: Color = App.colors.axis,
+    borderColor: Color = Color.White.copy(alpha = 0.2f),
 ) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 54.dp),
         shape = ButtonShape,
         border = BorderStroke(1.dp, borderColor),
         colors = ButtonDefaults.outlinedButtonColors(

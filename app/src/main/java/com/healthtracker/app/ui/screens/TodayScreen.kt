@@ -62,6 +62,17 @@ import com.healthtracker.app.ui.components.ScreenTitle
 import com.healthtracker.app.ui.components.SecondaryButton
 import com.healthtracker.app.ui.components.SectionHeader
 import com.healthtracker.app.ui.theme.App
+import com.healthtracker.app.ui.components.AnimatedCount
+import com.healthtracker.app.ui.components.ConfettiBurst
+import com.healthtracker.app.ui.components.GoalOrb
+import com.healthtracker.app.ui.components.LiquidGlass
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.Color
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -74,6 +85,25 @@ fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) 
     val h = st ?: return
     val s = h.s
 
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var pauseOn by remember { mutableStateOf(true) }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        pauseOn = com.healthtracker.app.pause.FoodAppWatcherService.isEnabled(ctx)
+    }
+    var burst by remember { mutableIntStateOf(0) }
+    var lastWater by remember { mutableIntStateOf(h.todayWaterMl) }
+    var hadWeight by remember { mutableStateOf(h.todayWeight != null) }
+    LaunchedEffect(h.todayWaterMl) {
+        if (lastWater < s.waterGoalMl && h.todayWaterMl >= s.waterGoalMl) burst++
+        lastWater = h.todayWaterMl
+    }
+    LaunchedEffect(h.todayWeight) {
+        val w = h.todayWeight
+        if (!hadWeight && w != null && (h.previousWeight?.let { w.kg < it.kg } ?: true)) burst++
+        hadWeight = w != null
+    }
+
+    Box(Modifier.fillMaxSize()) {
     ScreenScroll {
         val hour = LocalTime.now().hour
         val greeting = when {
@@ -82,6 +112,17 @@ fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) 
             else -> "Good evening"
         }
         ScreenTitle("$greeting, ${s.displayName}", Fmt.longDate(h.today))
+
+        if (s.pauseEnabled && !pauseOn) {
+            AppCard(tilt = false) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Rounded.Warning, contentDescription = null, tint = App.colors.coral)
+                    Text("Your food-app pause is off", style = MaterialTheme.typography.titleMedium, color = App.colors.ink)
+                }
+                Text("Swiggy and Zomato open without your message right now.", style = MaterialTheme.typography.bodyMedium, color = App.colors.ink2)
+                PrimaryButton("Turn it back on", onClick = { onOpenTab("plan") }, container = App.colors.coral, content = Color.White)
+            }
+        }
 
         s.lastGoalResult?.let { r ->
             DismissibleNote(Icons.Rounded.EmojiEvents, r + " Your next goal has started: ${s.goalName}, ${Fmt.kg(s.goalKg)} kg.") { vm.dismissGoalResult() }
@@ -98,6 +139,8 @@ fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) 
         WaterCard(h, vm)
         ActivityCard(h, onOpenTab)
         if (h.waistDue) WaistCard(h, vm)
+    }
+    ConfettiBurst(burst)
     }
 }
 
@@ -117,43 +160,65 @@ private fun DismissibleNote(icon: androidx.compose.ui.graphics.vector.ImageVecto
 private fun GoalCard(h: HealthState, onOpenTab: (String) -> Unit) {
     val c = App.colors
     val s = h.s
-    HeroCard {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (h.isBirthdayGoal) Icon(Icons.Rounded.Cake, contentDescription = null, tint = c.heroMuted, modifier = Modifier.size(18.dp))
-            Overline(if (h.isBirthdayGoal) "Birthday goal" else "Goal · ${s.goalName}", c.heroMuted)
-        }
-        val days = h.daysLeft
-        if (days == null) {
-            Text("Add your birthday to start the countdown.", style = MaterialTheme.typography.titleMedium, color = c.onHero)
-            PrimaryButton("Add birthday in Plan", onClick = { onOpenTab("plan") }, container = c.onHero, content = c.hero)
-            return@HeroCard
-        }
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (days == 0L) {
-                Text(if (h.isBirthdayGoal) "Happy birthday!" else "It's goal day!", style = MaterialTheme.typography.headlineLarge, color = c.onHero)
-            } else {
-                Text("$days", style = MaterialTheme.typography.displaySmall, color = c.onHero)
-                Text(if (days == 1L) "day to go" else "days to go", style = MaterialTheme.typography.titleLarge, color = c.onHero, modifier = Modifier.padding(bottom = 8.dp))
+    val days = h.daysLeft
+    val numberStyle = MaterialTheme.typography.displayLarge.copy(
+        shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.6f), androidx.compose.ui.geometry.Offset(0f, 3f), 18f),
+    )
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        GoalOrb(progress = h.goalProgress, modifier = Modifier.fillMaxWidth().height(300.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                when {
+                    days == null -> Text("?", style = numberStyle, color = Color.White)
+                    days == 0L -> Text(if (h.isBirthdayGoal) "Today!" else "Goal day", style = MaterialTheme.typography.headlineLarge.copy(shadow = numberStyle.shadow), color = Color.White)
+                    else -> AnimatedCount(days.toInt(), numberStyle, Color.White)
+                }
+                if (days != null && days > 0) {
+                    Text(if (days == 1L) "day to go" else "days to go", style = MaterialTheme.typography.titleSmall.copy(shadow = numberStyle.shadow), color = Color.White.copy(alpha = 0.9f))
+                }
             }
         }
-        Meter(h.goalProgress, color = c.heroFill, track = c.heroTrack)
-        Row(Modifier.fillMaxWidth()) {
-            Text(
-                "${Fmt.kg(h.goalLost)} of ${Fmt.kg(h.goalToLose)} kg lost",
-                style = MaterialTheme.typography.titleSmall, color = c.onHero, modifier = Modifier.weight(1f),
-            )
-            Text("Goal ${Fmt.kg(s.goalKg)} kg", style = MaterialTheme.typography.bodyMedium, color = c.heroMuted)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (h.isBirthdayGoal) Icon(Icons.Rounded.Cake, contentDescription = null, tint = c.primary, modifier = Modifier.size(18.dp))
+            Overline(if (h.isBirthdayGoal) "Birthday goal · ${Fmt.kg(s.goalKg)} kg" else "${s.goalName} · ${Fmt.kg(s.goalKg)} kg", c.primary)
         }
+        if (days == null) {
+            Text("Add your birthday to start the countdown.", style = MaterialTheme.typography.titleMedium, color = c.ink)
+            PrimaryButton("Add birthday in Plan", onClick = { onOpenTab("plan") })
+            return@Column
+        }
+        Text(
+            "${Fmt.kg(h.goalLost)} of ${Fmt.kg(h.goalToLose)} kg lost",
+            style = MaterialTheme.typography.headlineSmall, color = c.ink,
+        )
         val proj = h.projectedAtGoal
         Text(
             when {
                 h.currentKg <= s.goalKg -> "You've already reached this goal. Anything more is a bonus."
-                proj != null && days > 0 -> "At your current pace you'll be about ${Fmt.kg(proj)} kg on ${if (h.isBirthdayGoal) "your birthday" else Fmt.dayMonth(h.goalDate!!)}."
+                proj != null && days > 0 -> "At this pace you'll be about ${Fmt.kg(proj)} kg on ${if (h.isBirthdayGoal) "your birthday" else Fmt.dayMonth(h.goalDate!!)}."
                 else -> "Your projection appears after a week of weigh-ins."
             },
-            style = MaterialTheme.typography.bodyMedium, color = c.heroMuted,
+            style = MaterialTheme.typography.bodyMedium, color = c.ink2, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+            if (h.moneySaved > 0) Chip("₹${Fmt.int(h.moneySaved)} saved", c.primary)
+            Chip("${h.loggedLast7}/7 days logged", c.water)
+            Chip("BMI ${Fmt.one(h.bmiNow)}", c.data)
+        }
     }
+}
+
+@Composable
+private fun Chip(text: String, color: Color) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = color,
+        modifier = Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+    )
 }
 
 @Composable
@@ -283,7 +348,7 @@ private fun CaloriesCard(h: HealthState, onAddFood: () -> Unit, onOpenTab: (Stri
             Ring(
                 fraction = eaten / target.toFloat(),
                 size = 124.dp, stroke = 12.dp,
-                color = if (over) c.over else c.data,
+                color = if (over) c.over else c.primary,
                 track = c.track,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -327,29 +392,31 @@ private fun WaterCard(h: HealthState, vm: HealthViewModel) {
     val drunk = h.todayWaterMl
     AppCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.WaterDrop, contentDescription = null, tint = c.data, modifier = Modifier.size(20.dp))
+            Icon(Icons.Rounded.WaterDrop, contentDescription = null, tint = c.water, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Text("Water", style = MaterialTheme.typography.titleMedium, color = c.ink, modifier = Modifier.weight(1f))
             Text("Goal ${Fmt.litres(goal)} L", style = MaterialTheme.typography.bodySmall, color = c.ink2)
         }
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("${Fmt.litres(drunk)} L", style = MaterialTheme.typography.headlineLarge, color = c.ink)
-            Text("of ${Fmt.litres(goal)} L", style = MaterialTheme.typography.bodyLarge, color = c.ink2, modifier = Modifier.padding(bottom = 4.dp))
-        }
-        Meter(drunk / goal.toFloat(), height = 10.dp)
-        val note = when {
-            drunk >= goal -> "Goal reached for today. Nice work."
-            s.waterRemind -> {
-                val next = Instant.ofEpochMilli(ReminderScheduler.nextWater(s, ZonedDateTime.now())).atZone(ZoneId.systemDefault())
-                "${Fmt.litres(goal - drunk)} L left · next reminder ${Fmt.clock(next.hour * 60 + next.minute)}"
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            LiquidGlass(drunk / goal.toFloat(), Modifier.width(104.dp).height(160.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${Fmt.litres(drunk)} L", style = MaterialTheme.typography.displaySmall, color = c.ink)
+                Text("of ${Fmt.litres(goal)} L · ${(drunk * 100 / goal.coerceAtLeast(1)).coerceAtMost(999)}%", style = MaterialTheme.typography.bodyLarge, color = c.ink2)
+                val note = when {
+                    drunk >= goal -> "Goal reached for today. Nice work."
+                    s.waterRemind -> {
+                        val next = Instant.ofEpochMilli(ReminderScheduler.nextWater(s, ZonedDateTime.now())).atZone(ZoneId.systemDefault())
+                        "${Fmt.litres(goal - drunk)} L left · next alert ${Fmt.clock(next.hour * 60 + next.minute)}"
+                    }
+                    else -> "${Fmt.litres(goal - drunk)} L left"
+                }
+                Text(note, style = MaterialTheme.typography.bodySmall, color = c.ink2)
             }
-            else -> "${Fmt.litres(goal - drunk)} L left"
         }
-        Text(note, style = MaterialTheme.typography.bodyMedium, color = c.ink2)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SecondaryButton("Undo", onClick = { vm.undoWater() }, modifier = Modifier.weight(1f), enabled = drunk > 0)
-            PrimaryButton("+250 ml", onClick = { vm.addWater(250) }, modifier = Modifier.weight(1.2f))
-            PrimaryButton("+500", onClick = { vm.addWater(500) }, modifier = Modifier.weight(1f))
+            PrimaryButton("+250 ml", onClick = { vm.addWater(250) }, modifier = Modifier.weight(1.3f), container = c.water, content = c.onPrimary)
+            PrimaryButton("+500", onClick = { vm.addWater(500) }, modifier = Modifier.weight(1f), container = c.water, content = c.onPrimary)
         }
     }
 }

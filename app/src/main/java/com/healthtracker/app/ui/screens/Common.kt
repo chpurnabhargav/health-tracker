@@ -22,7 +22,7 @@ import com.healthtracker.app.ui.theme.App
 /** A scrolling screen with the standard 16 dp side margins. */
 @Composable
 fun ScreenScroll(content: @Composable ColumnScope.() -> Unit) {
-    Box(Modifier.fillMaxSize().background(App.colors.bg), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             Modifier
                 .widthIn(max = 640.dp)

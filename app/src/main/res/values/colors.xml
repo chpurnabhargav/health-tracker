@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#F6F6F4</color>
-    <color name="hero">#0D366B</color>
+    <color name="bg">#07080D</color>
+    <color name="hero">#0A0508</color>
     <color name="ic_launcher_background">#1C5CAB</color>
 </resources>

@@ -121,6 +121,38 @@ class CalcTest {
     private fun com.healthtracker.app.domain.NextGoal.label() = name
 
     @Test
+    fun strictPauseGetsHarderEachTime() {
+        val m = com.healthtracker.app.data.PauseMode.STRICT
+        assertEquals(10, com.healthtracker.app.domain.PauseRules.waitSeconds(m, 10, 0))
+        assertEquals(30, com.healthtracker.app.domain.PauseRules.waitSeconds(m, 10, 1))
+        assertEquals(60, com.healthtracker.app.domain.PauseRules.waitSeconds(m, 10, 2))
+        assertEquals(120, com.healthtracker.app.domain.PauseRules.waitSeconds(m, 10, 5))
+        assertEquals(180, com.healthtracker.app.domain.PauseRules.waitSeconds(m, 30, 9))
+        assertEquals(10, com.healthtracker.app.domain.PauseRules.waitSeconds(com.healthtracker.app.data.PauseMode.GENTLE, 10, 4))
+        assertEquals(300, com.healthtracker.app.domain.PauseRules.waitSeconds(com.healthtracker.app.data.PauseMode.LOCKDOWN, 10, 0))
+    }
+
+    @Test
+    fun promiseMustBeTypedExactly() {
+        val r = com.healthtracker.app.domain.PauseRules
+        assertTrue(r.promiseMatches("I am choosing food over my goal"))
+        assertTrue(r.promiseMatches("  i am choosing FOOD over my goal. "))
+        assertTrue(!r.promiseMatches("I am choosing food"))
+        assertTrue(!r.promiseMatches(""))
+        assertEquals(3150, r.moneySaved(9, 350))
+    }
+
+    @Test
+    fun allowanceEndsWhenYouLeaveTheApp() {
+        val g = com.healthtracker.app.pause.PauseGate
+        g.allowSession("in.swiggy.android")
+        assertTrue(g.isAllowed("in.swiggy.android"))
+        assertTrue(!g.isAllowed("com.application.zomato"))
+        g.revoke()
+        assertTrue(!g.isAllowed("in.swiggy.android"))
+    }
+
+    @Test
     fun formatting() {
         assertEquals("−1.2", Fmt.signedKg(-1.24))
         assertEquals("+0.4", Fmt.signedKg(0.4))

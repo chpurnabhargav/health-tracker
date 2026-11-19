@@ -70,7 +70,7 @@ import java.time.LocalDate
 
 private enum class Edit {
     NAME, BIRTHDAY, SEX, HEIGHT, START, ACTIVITY, PACE, GOAL_KG, GOAL_NAME, GOAL_DATE, CALORIES,
-    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT,
+    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE,
 }
 
 @Composable
@@ -93,6 +93,26 @@ fun PlanScreen(vm: HealthViewModel) {
                 }
             }.isSuccess
             vm.showMessage(if (ok) "Backup saved." else "Couldn't save the backup.")
+        }
+    }
+    var photoVersion by remember { mutableStateOf(0) }
+    val hasPhoto = remember(photoVersion) { com.healthtracker.app.pause.motivationPhoto(ctx).exists() }
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, bounds) }
+                    var sample = 1
+                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1600) sample *= 2
+                    val bmp = ctx.contentResolver.openInputStream(uri)?.use {
+                        android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+                    } ?: error("unreadable")
+                    com.healthtracker.app.pause.motivationPhoto(ctx).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it) }
+                }.isSuccess
+            }
+            photoVersion++
+            vm.showMessage(if (ok) "Photo saved. It shows on your pause screen." else "Couldn't use that photo.")
         }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -182,6 +202,10 @@ fun PlanScreen(vm: HealthViewModel) {
                 ValueRow("Every", "${s.waterEveryMin} min", onClick = { edit = Edit.WATER_EVERY })
             }
             HairlineDivider()
+            ToggleRow("Water pop-ups", "A big card on screen for 12 seconds, and a full-screen alert that wakes a locked phone", s.waterPopup) { v ->
+                vm.updateSettings { it.copy(waterPopup = v) }
+            }
+            HairlineDivider()
             ToggleRow("Morning weigh-in", "${Fmt.clock(s.weighMin)}, one follow-up if you forget. Type your weight right in the notification.", s.weighRemind) { v ->
                 vm.updateSettings { it.copy(weighRemind = v) }
             }
@@ -200,7 +224,20 @@ fun PlanScreen(vm: HealthViewModel) {
                 vm.updateSettings { it.copy(pauseEnabled = v) }
             }
             HairlineDivider()
+            ValueRow("Strictness", s.pauseMode.label, sub = s.pauseMode.detail, onClick = { edit = Edit.MODE })
+            HairlineDivider()
             ValueRow("Your message", s.pauseMessage, onClick = { edit = Edit.MESSAGE })
+            HairlineDivider()
+            ValueRow(
+                "Motivation photo", if (hasPhoto) "Change" else "Add",
+                sub = if (hasPhoto) "Shown on the pause screen" else "A goal outfit, a trip, or anything that reminds you why",
+                onClick = { photoLauncher.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            )
+            if (hasPhoto) {
+                androidx.compose.material3.TextButton(onClick = { com.healthtracker.app.pause.motivationPhoto(ctx).delete(); photoVersion++ }) { Text("Remove photo") }
+            }
+            HairlineDivider()
+            ValueRow("Usual order value", "₹${Fmt.int(s.orderValue)}", sub = "Each time you back out, this counts as money saved", onClick = { edit = Edit.ORDER_VALUE })
             HairlineDivider()
             val appNames = s.pauseApps.map { p -> KnownFoodApps.find { it.pkg == p }?.name ?: labelFor(ctx.packageManager, p) }.sorted()
             ValueRow("Apps", if (appNames.isEmpty()) "None" else appNames.joinToString(", "), onClick = { edit = Edit.APPS })
@@ -300,6 +337,12 @@ fun PlanScreen(vm: HealthViewModel) {
             help = "Leave it empty to use \"No ${s.displayName}, not till ${s.goalName}.\"",
             onDismiss = close,
         ) { v -> vm.updateSettings { it.copy(customPauseMessage = v.ifBlank { null }) }; close() }
+        Edit.MODE -> OptionsDialog("Strictness", com.healthtracker.app.data.PauseMode.entries, s.pauseMode, { it.label }, { it.detail }, onDismiss = close) { v ->
+            vm.updateSettings { it.copy(pauseMode = v) }; close()
+        }
+        Edit.ORDER_VALUE -> NumberDialog("Usual order value", "Amount", s.orderValue.toDouble(), "₹", decimals = false, range = 50.0..5000.0, onDismiss = close) { v ->
+            vm.updateSettings { it.copy(orderValue = v.toInt()) }; close()
+        }
         Edit.WAIT -> OptionsDialog("Wait before continuing", listOf(5, 10, 20, 30), s.pauseWaitSec, { "$it seconds" }, onDismiss = close) { v ->
             vm.updateSettings { it.copy(pauseWaitSec = v) }; close()
         }

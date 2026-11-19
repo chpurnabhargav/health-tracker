@@ -18,6 +18,8 @@ import com.healthtracker.app.domain.Fmt
 
 object Notifications {
     const val CH_WATER = "water"
+    const val CH_WATER_ALERT = "water_alert"
+    const val CH_PAUSE = "pause_status"
     const val CH_WEIGH = "weigh"
     const val CH_MEALS = "meals"
     const val CH_WEEKLY = "weekly"
@@ -26,6 +28,7 @@ object Notifications {
     const val ID_WEIGH = 102
     const val ID_MEAL = 103
     const val ID_WEEKLY = 104
+    const val ID_PAUSE_OFF = 105
 
     const val KEY_WEIGHT = "weight_kg"
     const val EXTRA_TAB = "tab"
@@ -36,8 +39,16 @@ object Notifications {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannels(
             listOf(
-                NotificationChannel(CH_WATER, "Water reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Reminders to drink water through the day"
+                NotificationChannel(CH_WATER, "Water updates", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Quiet updates after you log water"
+                },
+                NotificationChannel(CH_WATER_ALERT, "Water alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "Pop-up water reminders, including on the lock screen"
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                    enableVibration(true)
+                },
+                NotificationChannel(CH_PAUSE, "Food-app pause status", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "Tells you when the food-app pause has been switched off"
                 },
                 NotificationChannel(CH_WEIGH, "Morning weigh-in", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "Daily reminder to log your weight"
@@ -95,6 +106,52 @@ object Notifications {
             .setOnlyAlertOnce(true)
             .build()
         post(ctx, ID_WATER, n)
+    }
+
+    /** Pop-up water reminder: heads-up while using the phone, full screen when it's locked. */
+    fun waterAlert(ctx: Context, drunkMl: Int, goalMl: Int, fullScreen: Boolean) {
+        val add = PendingIntent.getBroadcast(
+            ctx, 201,
+            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_ADD_WATER),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val later = PendingIntent.getBroadcast(
+            ctx, 203,
+            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_SNOOZE_WATER),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val left = (goalMl - drunkMl).coerceAtLeast(0)
+        val b = base(ctx, CH_WATER_ALERT)
+            .setContentTitle("Water time · drink a glass now")
+            .setContentText("${Fmt.litres(drunkMl)} of ${Fmt.litres(goalMl)} L so far · ${Fmt.litres(left)} L to go")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(openApp(ctx, "today", 1))
+            .addAction(0, "+250 ml", add)
+            .addAction(0, "Snooze 15 min", later)
+            .setTimeoutAfter(20 * 60 * 1000L)
+        if (fullScreen) {
+            val full = PendingIntent.getActivity(
+                ctx, 204,
+                Intent(ctx, WaterAlertActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            b.setFullScreenIntent(full, true)
+        }
+        post(ctx, ID_WATER, b.build())
+    }
+
+    fun canUseFullScreen(ctx: Context): Boolean =
+        Build.VERSION.SDK_INT < 34 || ctx.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+
+    fun pauseOff(ctx: Context) {
+        val n = base(ctx, CH_PAUSE)
+            .setContentTitle("Your food-app pause is switched off")
+            .setContentText("Swiggy and Zomato will open without your message. Tap to turn it back on.")
+            .setContentIntent(openApp(ctx, "plan", 5))
+            .build()
+        post(ctx, ID_PAUSE_OFF, n)
     }
 
     fun waterDone(ctx: Context, goalMl: Int) {

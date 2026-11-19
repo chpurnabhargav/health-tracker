@@ -21,10 +21,27 @@ Everything stays on the phone. There's no account, no server and no ads.
 - **Reminders**: water through the day, morning weigh-in (type your weight straight into the
   notification), meal logging, and a Sunday review
 - **Food-app pause**: when you open Swiggy, Zomato or any app you choose, a full-screen message such as
-  "No Bhargav, not till your birthday." appears with a 10-second wait. Ordering is still possible and gets logged
+  "No Bhargav, not till your birthday." appears. Three strictness levels:
+  - **Gentle**: wait, then continue
+  - **Strict** (default): the wait grows each time you order in a day (10 s, 30 s, 1 min, 2 min), you type a
+    promise, and you log the order size before the app opens
+  - **Lockdown**: no ordering except your weekly planned meal or a 5-minute emergency unlock
+
+  An allowance only lasts while you stay in that app. Switching apps or locking the phone ends it, and the
+  pause comes back when you unlock with a food app still open. The app warns you if the pause is switched off,
+  shows the money saved each time you back out, and can show a motivation photo
+- **Water alerts**: a full-screen alert that wakes a locked phone, a 12-second card on top of whatever app
+  you're using, and a high-priority notification with +250 ml and snooze buttons
 - **Built for consistency**: minimum-day mode, "never miss twice", weekly averages instead of daily
   pass/fail, calorie target recalculated every 5 kg, a new goal that starts automatically after the
   goal date, and an optional planned meal out each week
+
+## Design
+
+Dark "night neon" theme with Space Grotesk and Inter (both SIL Open Font License, see `third_party/fonts`).
+The goal countdown is a 3D glass orb that fills with liquid as you lose weight; the liquid and the water glass stay
+level when you tilt the phone. Cards tilt in 3D when pressed, numbers count up, and confetti marks your water
+goal and lower weigh-ins.
 
 ## Install on a Samsung phone
 

@@ -32,6 +32,12 @@ enum class Pace(val label: String, val kgPerWeek: Double) {
     FAST("Fast · 1 kg a week", 1.0),
 }
 
+enum class PauseMode(val label: String, val detail: String) {
+    GENTLE("Gentle", "Wait, then you can continue"),
+    STRICT("Strict", "Longer waits each time, type a promise and log the order before you continue"),
+    LOCKDOWN("Lockdown", "No ordering, except your planned meal or a 5-minute emergency unlock"),
+}
+
 data class FoodApp(val pkg: String, val name: String)
 
 val KnownFoodApps = listOf(
@@ -77,6 +83,10 @@ data class UserSettings(
     val junkCheck: Boolean = true,
     val plannedMealsPerWeek: Int = 0,
     val recalcNotice: String? = null,
+    val pauseMode: PauseMode = PauseMode.STRICT,
+    val orderValue: Int = 350,
+    val waterPopup: Boolean = true,
+    val lastPauseOffWarnDay: Long? = null,
 ) {
     val displayName: String get() = name.ifBlank { "friend" }
     val pauseMessage: String
@@ -121,6 +131,10 @@ private object K {
     val junkCheck = booleanPreferencesKey("junk_check")
     val plannedMeals = intPreferencesKey("planned_meals_per_week")
     val recalcNotice = stringPreferencesKey("recalc_notice")
+    val pauseMode = stringPreferencesKey("pause_mode")
+    val orderValue = intPreferencesKey("order_value")
+    val waterPopup = booleanPreferencesKey("water_popup")
+    val lastPauseOffWarn = longPreferencesKey("last_pause_off_warn")
 }
 
 class SettingsRepository(private val context: Context) {
@@ -173,6 +187,10 @@ class SettingsRepository(private val context: Context) {
             junkCheck = p[K.junkCheck] ?: d.junkCheck,
             plannedMealsPerWeek = p[K.plannedMeals] ?: d.plannedMealsPerWeek,
             recalcNotice = p[K.recalcNotice],
+            pauseMode = p[K.pauseMode]?.let { runCatching { PauseMode.valueOf(it) }.getOrNull() } ?: d.pauseMode,
+            orderValue = p[K.orderValue] ?: d.orderValue,
+            waterPopup = p[K.waterPopup] ?: d.waterPopup,
+            lastPauseOffWarnDay = p[K.lastPauseOffWarn],
         )
     }
 
@@ -211,6 +229,10 @@ class SettingsRepository(private val context: Context) {
         p[K.junkCheck] = s.junkCheck
         p[K.plannedMeals] = s.plannedMealsPerWeek
         p.setOrRemove(K.recalcNotice, s.recalcNotice)
+        p[K.pauseMode] = s.pauseMode.name
+        p[K.orderValue] = s.orderValue
+        p[K.waterPopup] = s.waterPopup
+        p.setOrRemove(K.lastPauseOffWarn, s.lastPauseOffWarnDay)
     }
 
     private fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {

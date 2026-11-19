@@ -156,11 +156,26 @@ fun WeightChart(points: List<TrendPoint>, modifier: Modifier = Modifier) {
             val pt = Offset(xFor(p.day, w, left, right), y(p.trend))
             if (i == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
         }
-        drawPath(path, c.data, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        val firstX = xFor(points.first().day, w, left, right)
+        val lastX = xFor(points.last().day, w, left, right)
+        val area = Path().apply {
+            addPath(path)
+            lineTo(lastX, h - bottom)
+            lineTo(firstX, h - bottom)
+            close()
+        }
+        drawPath(area, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(c.data.copy(alpha = 0.30f), Color.Transparent), top, h - bottom))
+        drawPath(path, c.data.copy(alpha = 0.22f), style = Stroke(9.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(
+            path,
+            androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(c.data, c.water), firstX, lastX),
+            style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
         val last = points.last()
         val end = Offset(xFor(last.day, w, left, right), y(last.trend))
+        drawCircle(c.water.copy(alpha = 0.25f), radius = 12.dp.toPx(), center = end)
         drawCircle(c.card, radius = 7.dp.toPx(), center = end)
-        drawCircle(c.data, radius = 5.dp.toPx(), center = end)
+        drawCircle(c.water, radius = 5.dp.toPx(), center = end)
         val endLbl = tm.measure(Fmt.kg(last.trend), endStyle)
         drawText(endLbl, topLeft = Offset(min(w - endLbl.size.width, end.x + 9.dp.toPx()), end.y - endLbl.size.height / 2f))
 
@@ -233,8 +248,8 @@ fun DayBarChart(
                             Modifier
                                 .width(24.dp)
                                 .height(barH)
-                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                .background(b.color)
+                                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 2.dp, bottomEnd = 2.dp))
+                                .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(b.color, b.color.copy(alpha = 0.45f))))
                         )
                     }
                     Box(Modifier.height(labelH), contentAlignment = Alignment.BottomCenter) {

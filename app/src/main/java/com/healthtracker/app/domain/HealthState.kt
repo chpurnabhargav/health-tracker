@@ -167,6 +167,8 @@ class HealthState(
         pauses.filter { it.day >= first }
     }
     val monthClosed: Int by lazy { monthPauses.count { it.outcome == "closed" } }
+    val closedAll: Int by lazy { pauses.count { it.outcome == "closed" } }
+    val moneySaved: Int by lazy { closedAll * s.orderValue }
 
     val weekStart: LocalDate by lazy { today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)) }
     val plannedUsedThisWeek: Int by lazy {

@@ -61,6 +61,18 @@ class HealthRepository(val dao: HealthDao, val settings: SettingsRepository) {
 
     suspend fun pausesSince(day: Long) = dao.pausesFrom(day)
 
+    suspend fun allPauses() = dao.allPauses()
+
+    /** Logs a food-app order as an honest estimate, so it counts toward the day's calories. */
+    suspend fun logOrder(appName: String, label: String, kcal: Int, planned: Boolean) {
+        dao.insertFood(
+            FoodEntry(
+                day = today(), time = now(), name = "$appName order · $label", servings = 1.0, kcal = kcal,
+                protein = kcal * 0.03, carbs = kcal * 0.11, fat = kcal * 0.045, junk = !planned, plannedMeal = planned,
+            )
+        )
+    }
+
     suspend fun setMinimumDay(on: Boolean) {
         if (on) dao.upsertMinimumDay(MinimumDay(today())) else dao.deleteMinimumDay(today())
     }

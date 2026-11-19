@@ -39,6 +39,15 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
 import java.time.ZoneId
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+
+private fun Modifier.fillMaxSizeCompat() = this.fillMaxSize()
+private fun Modifier.androidxBackground() = this.background(Color(0xFF101418))
 
 /**
  * Renders every screen with three weeks of sample data and saves a PNG of each to
@@ -125,7 +134,14 @@ class ScreenshotTest {
     }
 
     private fun shot(name: String, content: @Composable () -> Unit) {
-        compose.setContent { HealthTheme { content() } }
+        compose.setContent {
+            HealthTheme {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xFF07080D))) {
+                    com.healthtracker.app.ui.components.AuroraBackground(listOf(Color(0xFF8E7CFF), Color(0xFF34D3F6), Color(0xFFC8FF4D)))
+                    content()
+                }
+            }
+        }
         compose.waitUntil(20_000) { vm.state.value?.weights?.size == 22 }
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$name.png")
@@ -164,14 +180,33 @@ class ScreenshotTest {
         val info = PauseInfo(
             headline = "No Bhargav.", sub = "Not till your birthday.", daysLeft = 47,
             goalLine = "Birthday goal 98.0 kg", lostLine = "You've lost 2.6 kg so far.",
-            monthLine = "This month you closed this screen 9 of 11 times.", waitSec = 10, plannedLeft = 1,
+            monthLine = "This month you closed this screen 9 of 11 times.", waitSec = 30, plannedLeft = 1,
+            mode = com.healthtracker.app.data.PauseMode.STRICT, continuesToday = 1, moneySaved = 3150, kcalLeft = 1004,
         )
         compose.mainClock.autoAdvance = false
-        compose.setContent { HealthTheme { PauseContent(info, "Swiggy", false, {}, {}, {}) } }
+        compose.setContent { HealthTheme { PauseContent(info, "Swiggy", false, {}, { _, _ -> }) } }
         compose.mainClock.advanceTimeBy(500)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/8-pause.png")
-        compose.mainClock.advanceTimeBy(11_000)
+        compose.mainClock.advanceTimeBy(31_000)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/9-pause-unlocked.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xhdpi")
+    fun s11_waterAlert() {
+        compose.setContent {
+            HealthTheme {
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.fillMaxSizeCompat().androidxBackground(),
+                    contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
+                ) {
+                    com.healthtracker.app.reminders.WaterAlertCard(1750, 3500, 8, 12, {}, {}, {},
+                        androidx.compose.ui.Modifier.padding(12.dp))
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/11-water-alert.png")
     }
 
     @Test

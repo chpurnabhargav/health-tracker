@@ -55,6 +55,7 @@ fun ReviewScreen(vm: HealthViewModel) {
             Triple("Average steps", r.avgSteps?.let { Fmt.int(it) } ?: "—", "Goal ${Fmt.int(s.stepGoal)}"),
         )
         r.avgProtein?.let { tiles += Triple("Average protein", "$it g", "Target ${h.proteinTarget} g") }
+        if (h.moneySaved > 0) tiles += Triple("Money saved", "₹${Fmt.int(h.moneySaved)}", "By closing food apps")
         r.avgSleepMin?.let { tiles += Triple("Average sleep", Fmt.hours(it), "A night") }
         TileGrid(tiles)
 
