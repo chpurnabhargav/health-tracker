@@ -200,7 +200,7 @@ class ScreenshotTest {
                     androidx.compose.ui.Modifier.fillMaxSizeCompat().androidxBackground(),
                     contentAlignment = androidx.compose.ui.Alignment.BottomCenter,
                 ) {
-                    com.healthtracker.app.reminders.WaterAlertCard(1750, 3500, 8, 12, {}, {}, {},
+                    com.healthtracker.app.reminders.WaterAlertCard(1750, 3500, 250, 8, 12, {}, {}, {},
                         androidx.compose.ui.Modifier.padding(12.dp))
                 }
             }

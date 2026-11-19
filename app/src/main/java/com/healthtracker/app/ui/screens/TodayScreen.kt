@@ -415,8 +415,8 @@ private fun WaterCard(h: HealthState, vm: HealthViewModel) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SecondaryButton("Undo", onClick = { vm.undoWater() }, modifier = Modifier.weight(1f), enabled = drunk > 0)
-            PrimaryButton("+250 ml", onClick = { vm.addWater(250) }, modifier = Modifier.weight(1.3f), container = c.water, content = c.onPrimary)
-            PrimaryButton("+500", onClick = { vm.addWater(500) }, modifier = Modifier.weight(1f), container = c.water, content = c.onPrimary)
+            PrimaryButton("+${s.glassMl} ml", onClick = { vm.addWater(s.glassMl) }, modifier = Modifier.weight(1.3f), container = c.water, content = c.onPrimary)
+            PrimaryButton("+${s.glassMl * 2}", onClick = { vm.addWater(s.glassMl * 2) }, modifier = Modifier.weight(1f), container = c.water, content = c.onPrimary)
         }
     }
 }

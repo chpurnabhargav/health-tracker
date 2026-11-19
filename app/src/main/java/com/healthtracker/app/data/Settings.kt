@@ -87,6 +87,7 @@ data class UserSettings(
     val orderValue: Int = 350,
     val waterPopup: Boolean = true,
     val lastPauseOffWarnDay: Long? = null,
+    val glassMl: Int = 250,
 ) {
     val displayName: String get() = name.ifBlank { "friend" }
     val pauseMessage: String
@@ -135,6 +136,7 @@ private object K {
     val orderValue = intPreferencesKey("order_value")
     val waterPopup = booleanPreferencesKey("water_popup")
     val lastPauseOffWarn = longPreferencesKey("last_pause_off_warn")
+    val glassMl = intPreferencesKey("glass_ml")
 }
 
 class SettingsRepository(private val context: Context) {
@@ -191,6 +193,7 @@ class SettingsRepository(private val context: Context) {
             orderValue = p[K.orderValue] ?: d.orderValue,
             waterPopup = p[K.waterPopup] ?: d.waterPopup,
             lastPauseOffWarnDay = p[K.lastPauseOffWarn],
+            glassMl = p[K.glassMl] ?: d.glassMl,
         )
     }
 
@@ -233,6 +236,7 @@ class SettingsRepository(private val context: Context) {
         p[K.orderValue] = s.orderValue
         p[K.waterPopup] = s.waterPopup
         p.setOrRemove(K.lastPauseOffWarn, s.lastPauseOffWarnDay)
+        p[K.glassMl] = s.glassMl
     }
 
     private fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {

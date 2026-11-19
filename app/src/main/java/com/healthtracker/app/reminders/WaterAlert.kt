@@ -94,6 +94,7 @@ private fun snooze(ctx: Context) {
 fun WaterAlertCard(
     drunkMl: Int,
     goalMl: Int,
+    glassMl: Int,
     secondsLeft: Int?,
     totalSeconds: Int,
     onAdd: (Int) -> Unit,
@@ -130,9 +131,14 @@ fun WaterAlertCard(
             IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, "Dismiss", tint = Color.White.copy(alpha = 0.7f)) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PrimaryButton("+250 ml", onClick = { added += 250; onAdd(250) }, modifier = Modifier.weight(1.3f))
-            SecondaryButton("+500", onClick = { added += 500; onAdd(500) }, modifier = Modifier.weight(1f), contentColor = Color.White)
-            SecondaryButton("Later", onClick = onSnooze, modifier = Modifier.weight(1f), contentColor = Color.White)
+            PrimaryButton("Drank $glassMl ml", onClick = { added += glassMl; onAdd(glassMl) }, modifier = Modifier.weight(1.6f), enabled = added == 0)
+            SecondaryButton("Skip", onClick = onDismiss, modifier = Modifier.weight(1f), contentColor = Color.White)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            androidx.compose.material3.TextButton(onClick = { added += glassMl * 2; onAdd(glassMl * 2) }, enabled = added == 0) {
+                Text("Drank ${glassMl * 2} ml", color = c.water)
+            }
+            androidx.compose.material3.TextButton(onClick = onSnooze) { Text("Remind me in 15 min", color = Color.White.copy(alpha = 0.75f)) }
         }
     }
 }
@@ -161,7 +167,7 @@ class WaterOverlay(private val ctx: android.accessibilityservice.AccessibilitySe
     private var view: ComposeView? = null
     private var owner: OverlayOwner? = null
 
-    fun show(drunkMl: Int, goalMl: Int, seconds: Int = 12) {
+    fun show(drunkMl: Int, goalMl: Int, glassMl: Int, seconds: Int = 12) {
         val o = OverlayOwner().also { it.start() }
         val v = ComposeView(ctx).apply {
             setViewTreeLifecycleOwner(o)
@@ -177,10 +183,10 @@ class WaterOverlay(private val ctx: android.accessibilityservice.AccessibilitySe
                     }
                     AnimatedVisibility(visible, enter = slideInVertically { it } + fadeIn()) {
                         WaterAlertCard(
-                            drunkMl, goalMl, left, seconds,
+                            drunkMl, goalMl, glassMl, left, seconds,
                             onAdd = { ml -> logWater(ctx, ml); main.postDelayed({ hide() }, 1200) },
                             onSnooze = { snooze(ctx); hide() },
-                            onDismiss = { hide() },
+                            onDismiss = { ctx.getSystemService(NotificationManager::class.java)?.cancel(Notifications.ID_WATER); hide() },
                             modifier = Modifier.padding(horizontal = 12.dp),
                         )
                     }
@@ -224,15 +230,15 @@ class WaterAlertActivity : ComponentActivity() {
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         lifecycleScope.launch {
-            val goal = container.settings.current().waterGoalMl
+            val st = container.settings.current()
             val drunk = container.repo.waterToday()
-            setContent { HealthTheme { WaterAlertScreen(drunk, goal) } }
+            setContent { HealthTheme { WaterAlertScreen(drunk, st.waterGoalMl, st.glassMl) } }
         }
         Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing) finish() }, 60_000)
     }
 
     @Composable
-    private fun WaterAlertScreen(drunk: Int, goal: Int) {
+    private fun WaterAlertScreen(drunk: Int, goal: Int, glass: Int) {
         val c = App.colors
         var added by remember { mutableIntStateOf(0) }
         var burst by remember { mutableIntStateOf(0) }
@@ -253,18 +259,20 @@ class WaterAlertActivity : ComponentActivity() {
                 )
                 LiquidGlass((drunk + added) / goal.toFloat(), Modifier.width(170.dp).height(260.dp))
                 Spacer(Modifier.weight(1f))
-                PrimaryButton("I drank 250 ml", onClick = {
-                    added += 250; burst++; logWater(this@WaterAlertActivity, 250)
+                PrimaryButton(if (added > 0) "Logged. Nice!" else "Drank $glass ml", enabled = added == 0, onClick = {
+                    added += glass; burst++; logWater(this@WaterAlertActivity, glass)
                     Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1400)
                 })
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SecondaryButton("+500 ml", onClick = {
-                        added += 500; burst++; logWater(this@WaterAlertActivity, 500)
+                    SecondaryButton("Drank ${glass * 2} ml", enabled = added == 0, onClick = {
+                        added += glass * 2; burst++; logWater(this@WaterAlertActivity, glass * 2)
                         Handler(Looper.getMainLooper()).postDelayed({ finish() }, 1400)
                     }, modifier = Modifier.weight(1f), contentColor = Color.White)
-                    SecondaryButton("Snooze 15 min", onClick = { snooze(this@WaterAlertActivity); finish() }, modifier = Modifier.weight(1f), contentColor = Color.White)
+                    SecondaryButton("Skip", onClick = {
+                        getSystemService(NotificationManager::class.java)?.cancel(Notifications.ID_WATER); finish()
+                    }, modifier = Modifier.weight(1f), contentColor = Color.White)
                 }
-                SecondaryButton("Dismiss", onClick = { finish() }, contentColor = Color.White.copy(alpha = 0.7f), borderColor = Color.Transparent)
+                SecondaryButton("Remind me in 15 min", onClick = { snooze(this@WaterAlertActivity); finish() }, contentColor = Color.White.copy(alpha = 0.75f), borderColor = Color.Transparent)
             }
             ConfettiBurst(burst)
         }

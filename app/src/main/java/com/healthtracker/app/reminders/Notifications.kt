@@ -91,35 +91,40 @@ object Notifications {
         }
     }
 
-    fun water(ctx: Context, drunkMl: Int, goalMl: Int) {
-        val add = PendingIntent.getBroadcast(
+    private fun drankAndSkip(ctx: Context, glassMl: Int): Pair<PendingIntent, PendingIntent> {
+        val drank = PendingIntent.getBroadcast(
             ctx, 201,
-            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_ADD_WATER),
+            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_ADD_WATER)
+                .putExtra(ReminderReceiver.EXTRA_ML, glassMl),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val skip = PendingIntent.getBroadcast(
+            ctx, 205,
+            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_SKIP_WATER),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return drank to skip
+    }
+
+    /** Quiet water reminder (used when the on-screen card is already showing). */
+    fun water(ctx: Context, drunkMl: Int, goalMl: Int, glassMl: Int) {
+        val (drank, skip) = drankAndSkip(ctx, glassMl)
         val left = (goalMl - drunkMl).coerceAtLeast(0)
         val n = base(ctx, CH_WATER)
             .setContentTitle("Time for a glass of water")
             .setContentText("${Fmt.litres(drunkMl)} of ${Fmt.litres(goalMl)} L so far · ${Fmt.litres(left)} L to go")
             .setContentIntent(openApp(ctx, "today", 1))
-            .addAction(0, "+250 ml", add)
+            .addAction(0, "Drank $glassMl ml", drank)
+            .addAction(0, "Skip", skip)
             .setOnlyAlertOnce(true)
+            .setTimeoutAfter(20 * 60 * 1000L)
             .build()
         post(ctx, ID_WATER, n)
     }
 
     /** Pop-up water reminder: heads-up while using the phone, full screen when it's locked. */
-    fun waterAlert(ctx: Context, drunkMl: Int, goalMl: Int, fullScreen: Boolean) {
-        val add = PendingIntent.getBroadcast(
-            ctx, 201,
-            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_ADD_WATER),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-        val later = PendingIntent.getBroadcast(
-            ctx, 203,
-            Intent(ctx, ReminderReceiver::class.java).setAction(ReminderReceiver.ACTION_SNOOZE_WATER),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
+    fun waterAlert(ctx: Context, drunkMl: Int, goalMl: Int, glassMl: Int, fullScreen: Boolean) {
+        val (drank, skip) = drankAndSkip(ctx, glassMl)
         val left = (goalMl - drunkMl).coerceAtLeast(0)
         val b = base(ctx, CH_WATER_ALERT)
             .setContentTitle("Water time · drink a glass now")
@@ -128,8 +133,8 @@ object Notifications {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(openApp(ctx, "today", 1))
-            .addAction(0, "+250 ml", add)
-            .addAction(0, "Snooze 15 min", later)
+            .addAction(0, "Drank $glassMl ml", drank)
+            .addAction(0, "Skip", skip)
             .setTimeoutAfter(20 * 60 * 1000L)
         if (fullScreen) {
             val full = PendingIntent.getActivity(
@@ -140,6 +145,18 @@ object Notifications {
             b.setFullScreenIntent(full, true)
         }
         post(ctx, ID_WATER, b.build())
+    }
+
+    /** Short confirmation after tapping Drank in a notification. Disappears by itself. */
+    fun waterLogged(ctx: Context, addedMl: Int, totalMl: Int, goalMl: Int) {
+        val n = base(ctx, CH_WATER)
+            .setContentTitle("Logged $addedMl ml")
+            .setContentText("${Fmt.litres(totalMl)} of ${Fmt.litres(goalMl)} L today · ${Fmt.litres((goalMl - totalMl).coerceAtLeast(0))} L to go")
+            .setContentIntent(openApp(ctx, "today", 1))
+            .setOnlyAlertOnce(true)
+            .setTimeoutAfter(6_000L)
+            .build()
+        post(ctx, ID_WATER, n)
     }
 
     fun canUseFullScreen(ctx: Context): Boolean =

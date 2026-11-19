@@ -70,7 +70,7 @@ import java.time.LocalDate
 
 private enum class Edit {
     NAME, BIRTHDAY, SEX, HEIGHT, START, ACTIVITY, PACE, GOAL_KG, GOAL_NAME, GOAL_DATE, CALORIES,
-    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE,
+    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE, GLASS,
 }
 
 @Composable
@@ -179,6 +179,8 @@ fun PlanScreen(vm: HealthViewModel) {
                     label = "water",
                 )
             }
+            HairlineDivider()
+            ValueRow("Glass size", "${s.glassMl} ml", sub = "What one tap of Drank adds, in reminders and on Today", onClick = { edit = Edit.GLASS })
             HairlineDivider()
             Row(Modifier.fillMaxWidth().heightIn(min = 60.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Steps", style = MaterialTheme.typography.bodyLarge, color = c.ink, modifier = Modifier.weight(1f))
@@ -337,6 +339,9 @@ fun PlanScreen(vm: HealthViewModel) {
             help = "Leave it empty to use \"No ${s.displayName}, not till ${s.goalName}.\"",
             onDismiss = close,
         ) { v -> vm.updateSettings { it.copy(customPauseMessage = v.ifBlank { null }) }; close() }
+        Edit.GLASS -> OptionsDialog("Glass size", listOf(150, 200, 250, 300, 350, 400, 500, 750, 1000), s.glassMl, { "$it ml" }, onDismiss = close) { v ->
+            vm.updateSettings { it.copy(glassMl = v) }; close()
+        }
         Edit.MODE -> OptionsDialog("Strictness", com.healthtracker.app.data.PauseMode.entries, s.pauseMode, { it.label }, { it.detail }, onDismiss = close) { v ->
             vm.updateSettings { it.copy(pauseMode = v) }; close()
         }

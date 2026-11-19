@@ -20,6 +20,8 @@ class ReminderReceiver : BroadcastReceiver() {
         const val ACTION_ADD_WATER = "com.healthtracker.app.ADD_WATER"
         const val ACTION_WEIGHT_REPLY = "com.healthtracker.app.WEIGHT_REPLY"
         const val ACTION_SNOOZE_WATER = "com.healthtracker.app.SNOOZE_WATER"
+        const val ACTION_SKIP_WATER = "com.healthtracker.app.SKIP_WATER"
+        const val EXTRA_ML = "ml"
         const val EXTRA_TYPE = "type"
     }
 
@@ -40,11 +42,15 @@ class ReminderReceiver : BroadcastReceiver() {
         val s = c.settings.current()
         when (intent.action) {
             ACTION_ADD_WATER -> {
-                c.repo.addWater(250)
+                val ml = intent.getIntExtra(EXTRA_ML, s.glassMl).coerceIn(50, 2000)
+                c.repo.addWater(ml)
                 val total = c.repo.waterToday()
                 if (total >= s.waterGoalMl) Notifications.waterDone(ctx, s.waterGoalMl)
-                else Notifications.water(ctx, total, s.waterGoalMl)
+                else Notifications.waterLogged(ctx, ml, total, s.waterGoalMl)
             }
+
+            ACTION_SKIP_WATER ->
+                ctx.getSystemService(android.app.NotificationManager::class.java)?.cancel(Notifications.ID_WATER)
 
             ACTION_SNOOZE_WATER -> {
                 ReminderScheduler.snoozeWater(ctx, 15)
@@ -76,13 +82,13 @@ class ReminderReceiver : BroadcastReceiver() {
                                 val service = com.healthtracker.app.pause.FoodAppWatcherService.instance
                                 if (inUse && service != null) {
                                     // Big card on screen, plus a quiet notification so it's still in the shade later
-                                    service.showWaterOverlay(total, s.waterGoalMl)
-                                    Notifications.water(ctx, total, s.waterGoalMl)
+                                    service.showWaterOverlay(total, s.waterGoalMl, s.glassMl)
+                                    Notifications.water(ctx, total, s.waterGoalMl, s.glassMl)
                                 } else {
-                                    Notifications.waterAlert(ctx, total, s.waterGoalMl, fullScreen = !inUse)
+                                    Notifications.waterAlert(ctx, total, s.waterGoalMl, s.glassMl, fullScreen = !inUse)
                                 }
                             } else {
-                                Notifications.water(ctx, total, s.waterGoalMl)
+                                Notifications.water(ctx, total, s.waterGoalMl, s.glassMl)
                             }
                         }
                         val today = java.time.LocalDate.now().toEpochDay()

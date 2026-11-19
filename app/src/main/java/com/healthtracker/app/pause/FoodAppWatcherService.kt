@@ -133,11 +133,11 @@ class FoodAppWatcherService : AccessibilityService() {
             }.getOrDefault("this app")
 
     /** Shows the water card on top of whatever app is open, for a few seconds. */
-    fun showWaterOverlay(drunkMl: Int, goalMl: Int) {
+    fun showWaterOverlay(drunkMl: Int, goalMl: Int, glassMl: Int) {
         main.post {
             runCatching {
                 overlay?.hide()
-                overlay = WaterOverlay(this).also { it.show(drunkMl, goalMl) }
+                overlay = WaterOverlay(this).also { it.show(drunkMl, goalMl, glassMl) }
             }
         }
     }
