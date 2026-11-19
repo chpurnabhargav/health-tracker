@@ -1,0 +1,89 @@
+# Health Tracker
+
+A personal Android app for getting fit with structure: daily weigh-ins with a trend line, calories,
+water, steps and sleep, a weekly review, and a pause screen that appears when you open a food
+delivery app.
+
+Everything stays on the phone. There's no account, no server and no ads.
+
+## Features
+
+- **Today**: birthday countdown with your goal and projection, weight vs 7-day trend, calorie ring,
+  protein, water buttons, steps and sleep, and a weekly waist check
+- **Weight**: trend chart (tap or drag to inspect a day), weekly rate, BMI, projected weight on goal day,
+  waist history, milestones and a list of recent weigh-ins
+- **Food**: built-in list of about 100 Indian and everyday foods, your saved foods, custom foods,
+  7-day calorie chart, protein/carbs/fat split, top calorie sources and late-night eating
+- **Weekly review**: headline, key numbers, water by day, food-app pauses, what it noticed, and one focus
+  for next week
+- **Plan**: profile, goal, targets, reminders, food-app pause settings, phone setup checklist,
+  backup and restore
+- **Reminders**: water through the day, morning weigh-in (type your weight straight into the
+  notification), meal logging, and a Sunday review
+- **Food-app pause**: when you open Swiggy, Zomato or any app you choose, a full-screen message such as
+  "No Bhargav, not till your birthday." appears with a 10-second wait. Ordering is still possible and gets logged
+- **Built for consistency**: minimum-day mode, "never miss twice", weekly averages instead of daily
+  pass/fail, calorie target recalculated every 5 kg, a new goal that starts automatically after the
+  goal date, and an optional planned meal out each week
+
+## Install on a Samsung phone
+
+1. Download `app-release.apk` to the phone.
+2. Samsung's **Auto Blocker** stops apps from outside the Play Store. Turn it off for the install:
+   **Settings → Security and privacy → Auto Blocker → off**.
+3. Open the APK from **My Files → Downloads** and tap **Install**. If asked, allow
+   **Install unknown apps** for My Files. If Play Protect warns about an unknown app, choose
+   **More details → Install anyway**.
+4. Turn Auto Blocker back on. The installed app keeps working.
+5. Open the app and follow the setup. In **Plan → Phone setup**, turn on:
+   - **Notifications**
+   - **Run in the background**, so Samsung doesn't put the app to sleep and delay reminders
+   - **Food-app pause**: first **Settings → Apps → Health Tracker → ⋮ → Allow restricted settings**,
+     then **Settings → Accessibility → Installed apps → Health Tracker food-app pause → on**
+   - **Steps and sleep** through Health Connect. In Samsung Health, also turn on
+     **Settings → Health Connect** syncing so steps and sleep reach the app
+
+Before installing a new version, use **Plan → Save a backup**.
+
+## Build
+
+Requirements: JDK 17 or newer and the Android SDK (platform 36, build-tools 35).
+
+```bash
+./gradlew :app:assembleRelease
+```
+
+Without a `keystore.properties` file, the release build is signed with the debug key. To sign with your
+own key, create `keystore.properties` in the project root:
+
+```
+storeFile=keystore/release.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+Updates only install over an existing copy when they're signed with the same key, so keep the keystore safe.
+
+## Tests
+
+```bash
+./gradlew :app:testDebugUnitTest
+```
+
+`CalcTest` checks the calorie maths, trend line, birthday countdown, milestones and reminder timing.
+`ScreenshotTest` loads three weeks of sample data, checks the numbers the screens show, and renders every
+screen to `app/build/outputs/roborazzi/` with Robolectric and Roborazzi.
+
+## How it works
+
+- Kotlin, Jetpack Compose and Material 3; Room for the database and DataStore for settings
+- Calorie target: Mifflin-St Jeor resting energy × activity level, minus 550, 825 or 1,100 kcal a day for
+  a gentle, steady or fast pace, never below 1,500 (men) or 1,200 (women)
+- Trend weight: the average of all weigh-ins in the 7 days ending that day
+- Reminders use exact alarms and are rescheduled after a restart
+- The food-app pause is an accessibility service that only looks at which app comes to the front.
+  It can't read screen content (`canRetrieveWindowContent` is off)
+
+This app gives general guidance, not medical advice. Check with a doctor before starting a diet or
+exercise plan.
