@@ -177,29 +177,43 @@ class Coach(private val settings: SettingsRepository) {
         else (listOf(s.coachWorkingModel) + Gemini.fallbackModels).filter { it.isNotBlank() }.distinct()
         var last: CoachError? = null
         for (m in models) {
-            try {
-                val noThinking = m.contains("2.5-flash")
-                val text = try {
-                    Gemini.parseText(Gemini.post(key, m, Gemini.buildRequest(system, turns, maxTokens, schema, noThinking)))
+            val noThinking = m.contains("2.5-flash")
+            for (attempt in 0..1) {
+                try {
+                    val text = try {
+                        Gemini.parseText(Gemini.post(key, m, Gemini.buildRequest(system, turns, maxTokens, schema, noThinking)))
+                    } catch (e: CoachError) {
+                        if (e.httpCode == 400 && noThinking) Gemini.parseText(Gemini.post(key, m, Gemini.buildRequest(system, turns, maxTokens, schema, false)))
+                        else throw e
+                    }
+                    val today = LocalDate.now().toEpochDay()
+                    settings.update {
+                        if (keyOverride != null) it.copy(coachWorkingModel = m)
+                        else it.copy(
+                            coachWorkingModel = m,
+                            coachCallsDay = today,
+                            coachCalls = (if (it.coachCallsDay == today) it.coachCalls else 0) + 1,
+                        )
+                    }
+                    return text
                 } catch (e: CoachError) {
-                    if (e.httpCode == 400 && noThinking) Gemini.parseText(Gemini.post(key, m, Gemini.buildRequest(system, turns, maxTokens, schema, false)))
-                    else throw e
+                    last = e
+                    when {
+                        // Busy server: wait a moment and try the same model once more.
+                        e.httpCode >= 500 && attempt == 0 -> kotlinx.coroutines.delay(1500)
+                        // Busy, out of quota or missing: try the next model (free limits are per model).
+                        e.httpCode >= 500 || e.httpCode == 429 || e.httpCode == 404 -> break
+                        else -> throw e
+                    }
                 }
-                val today = LocalDate.now().toEpochDay()
-                settings.update {
-                    it.copy(
-                        coachWorkingModel = m,
-                        coachCallsDay = today,
-                        coachCalls = (if (it.coachCallsDay == today) it.coachCalls else 0) + 1,
-                    )
-                }
-                return text
-            } catch (e: CoachError) {
-                last = e
-                if (e.httpCode != 404) throw e
             }
         }
-        throw if (last?.httpCode == 404) CoachError("None of the Gemini models answered. Set a model name in Plan → Coach.") else (last ?: CoachError("Coach hit a problem."))
+        val l = last
+        throw when {
+            l == null -> CoachError("Coach hit a problem.")
+            l.httpCode == 404 -> CoachError("None of the Gemini models answered. Set a model name in Plan → Coach.")
+            else -> l
+        }
     }
 
     /** Checks a key with one tiny request (doesn't count toward the daily limit). */

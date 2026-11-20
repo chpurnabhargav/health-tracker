@@ -19,7 +19,7 @@ object Gemini {
 
     /** Tried in order until one exists for this key. Can be overridden in settings. */
     val fallbackModels = listOf(
-        "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.0-flash",
+        "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash",
     )
 
     fun buildRequest(
@@ -73,7 +73,7 @@ object Gemini {
             code == 401 || code == 403 -> CoachError("This key can't use Gemini. Check it in Google AI Studio.", code)
             code == 404 -> CoachError("Model not found", code)
             code == 429 -> CoachError("Google's free limit for this key is used up for now. Try again later.", code)
-            code >= 500 -> CoachError("Google's servers are busy. Try again in a minute.", code)
+            code >= 500 -> CoachError("Gemini is overloaded right now (error $code). Try again in a minute.", code)
             else -> CoachError("Coach hit a problem (${code}). ${msg.take(120)}", code)
         }
     }
@@ -93,8 +93,14 @@ object Gemini {
             val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code !in 200..299) throw errorFor(code, body)
             body
+        } catch (e: java.net.UnknownHostException) {
+            throw CoachError("Can't reach Google. Check your internet, and turn off Private DNS or ad blockers if you use one.")
+        } catch (e: java.net.SocketTimeoutException) {
+            throw CoachError("Gemini took too long to answer. Try again.")
+        } catch (e: javax.net.ssl.SSLException) {
+            throw CoachError("Secure connection to Google failed. Check your phone's date and time.")
         } catch (e: IOException) {
-            throw CoachError("No internet connection. Coach needs the internet; everything else works offline.")
+            throw CoachError("Couldn't connect to Google (${e.javaClass.simpleName}). Check your internet and try again.")
         } finally {
             conn.disconnect()
         }
