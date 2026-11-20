@@ -232,6 +232,16 @@ object Notifications {
         post(ctx, ID_MEAL, n)
     }
 
+    fun protein(ctx: Context, name: String, have: Int, target: Int) {
+        val n = base(ctx, CH_MEALS)
+            .setContentTitle("$name, you're ${target - have} g short on protein")
+            .setContentText("Easy adds: 2 boiled eggs (13 g), bowl of curd (5 g), 100 g paneer (18 g), soya chunks (25 g), chicken breast (46 g).")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("You've had $have of $target g so far. Easy adds: 2 boiled eggs (13 g), a bowl of curd (5 g), 100 g paneer (18 g), a bowl of soya chunks (25 g), or grilled chicken breast (46 g)."))
+            .setContentIntent(openApp(ctx, "food", 6))
+            .build()
+        post(ctx, ID_MEAL, n)
+    }
+
     fun weekly(ctx: Context) {
         val n = base(ctx, CH_WEEKLY)
             .setContentTitle("Your weekly review is ready")

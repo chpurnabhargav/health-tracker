@@ -36,6 +36,15 @@ Everything stays on the phone. There's no account, no server and no ads.
   craving pass?" and smart snacks under 200 kcal if you're really hungry. Open it from Today or straight from
   the pause screen
 - **Home-screen widget**: the water glass, today's litres, the birthday countdown and a one-tap Drank button
+- **Nutrition**: about 250 Indian, regional, street, restaurant and packaged foods with portion sizes and an oil level
+  (less / home / restaurant). Meals grouped by breakfast, lunch, snacks and dinner, "same as yesterday", saved
+  combos, and typing a whole meal ("2 roti, dal, half plate rice") to log it. A daily 0–100 nutrition score
+  (calories, protein, fibre, vegetables and fruit, junk, sugar) with what to fix, "What should I eat?" ideas that fit
+  your calories and protein, a planner for tomorrow, instant feedback after each meal, and a 4:30 PM protein check
+- **Coach (optional, Gemini)**: chat with an assistant that sees a short summary of your app data, a daily tip, an
+  AI-written weekly review, and estimates for foods the app doesn't know. You add your own Gemini API key in the app;
+  it's stored only on the phone. Off-topic questions are refused on the phone before any request, answers are kept
+  short, there's a daily question limit (25 by default), and tips and reviews are generated at most once a day or week
 - **Water alerts**: a full-screen alert that wakes a locked phone, a 12-second card on top of whatever app
   you're using, and a high-priority notification with +250 ml and snooze buttons
 - **Built for consistency**: minimum-day mode, "never miss twice", weekly averages instead of daily

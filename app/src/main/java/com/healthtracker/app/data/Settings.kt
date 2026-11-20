@@ -93,6 +93,20 @@ data class UserSettings(
     val lockEndMin: Int = 6 * 60,
     val weekendLockdown: Boolean = false,
     val cravingWins: Int = 0,
+    val proteinNudge: Boolean = true,
+    val mealPlan: String = "{}",
+    val coachKey: String = "",
+    val coachEnabled: Boolean = true,
+    val coachModel: String = "",
+    val coachWorkingModel: String = "",
+    val coachDailyLimit: Int = 25,
+    val coachCallsDay: Long = 0L,
+    val coachCalls: Int = 0,
+    val coachTipDay: Long = 0L,
+    val coachTip: String = "",
+    val coachReviewDay: Long = 0L,
+    val coachReview: String = "",
+    val coachChat: String = "[]",
 ) {
     val displayName: String get() = name.ifBlank { "friend" }
     val pauseMessage: String
@@ -147,6 +161,20 @@ private object K {
     val lockEnd = intPreferencesKey("lock_end_min")
     val weekendLockdown = booleanPreferencesKey("weekend_lockdown")
     val cravingWins = intPreferencesKey("craving_wins")
+    val proteinNudge = booleanPreferencesKey("protein_nudge")
+    val mealPlan = stringPreferencesKey("meal_plan")
+    val coachKey = stringPreferencesKey("coach_key")
+    val coachEnabled = booleanPreferencesKey("coach_enabled")
+    val coachModel = stringPreferencesKey("coach_model")
+    val coachWorkingModel = stringPreferencesKey("coach_working_model")
+    val coachDailyLimit = intPreferencesKey("coach_daily_limit")
+    val coachCallsDay = longPreferencesKey("coach_calls_day")
+    val coachCalls = intPreferencesKey("coach_calls")
+    val coachTipDay = longPreferencesKey("coach_tip_day")
+    val coachTip = stringPreferencesKey("coach_tip")
+    val coachReviewDay = longPreferencesKey("coach_review_day")
+    val coachReview = stringPreferencesKey("coach_review")
+    val coachChat = stringPreferencesKey("coach_chat")
 }
 
 class SettingsRepository(private val context: Context, private val onChange: () -> Unit = {}) {
@@ -210,6 +238,20 @@ class SettingsRepository(private val context: Context, private val onChange: () 
             lockEndMin = p[K.lockEnd] ?: d.lockEndMin,
             weekendLockdown = p[K.weekendLockdown] ?: d.weekendLockdown,
             cravingWins = p[K.cravingWins] ?: d.cravingWins,
+            proteinNudge = p[K.proteinNudge] ?: d.proteinNudge,
+            mealPlan = p[K.mealPlan] ?: d.mealPlan,
+            coachKey = p[K.coachKey] ?: d.coachKey,
+            coachEnabled = p[K.coachEnabled] ?: d.coachEnabled,
+            coachModel = p[K.coachModel] ?: d.coachModel,
+            coachWorkingModel = p[K.coachWorkingModel] ?: d.coachWorkingModel,
+            coachDailyLimit = p[K.coachDailyLimit] ?: d.coachDailyLimit,
+            coachCallsDay = p[K.coachCallsDay] ?: d.coachCallsDay,
+            coachCalls = p[K.coachCalls] ?: d.coachCalls,
+            coachTipDay = p[K.coachTipDay] ?: d.coachTipDay,
+            coachTip = p[K.coachTip] ?: d.coachTip,
+            coachReviewDay = p[K.coachReviewDay] ?: d.coachReviewDay,
+            coachReview = p[K.coachReview] ?: d.coachReview,
+            coachChat = p[K.coachChat] ?: d.coachChat,
         )
     }
 
@@ -258,6 +300,20 @@ class SettingsRepository(private val context: Context, private val onChange: () 
         p[K.lockEnd] = s.lockEndMin
         p[K.weekendLockdown] = s.weekendLockdown
         p[K.cravingWins] = s.cravingWins
+        p[K.proteinNudge] = s.proteinNudge
+        p[K.mealPlan] = s.mealPlan
+        p[K.coachKey] = s.coachKey
+        p[K.coachEnabled] = s.coachEnabled
+        p[K.coachModel] = s.coachModel
+        p[K.coachWorkingModel] = s.coachWorkingModel
+        p[K.coachDailyLimit] = s.coachDailyLimit
+        p[K.coachCallsDay] = s.coachCallsDay
+        p[K.coachCalls] = s.coachCalls
+        p[K.coachTipDay] = s.coachTipDay
+        p[K.coachTip] = s.coachTip
+        p[K.coachReviewDay] = s.coachReviewDay
+        p[K.coachReview] = s.coachReview
+        p[K.coachChat] = s.coachChat
     }
 
     private fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {

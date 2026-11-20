@@ -31,6 +31,7 @@ import com.healthtracker.app.ui.components.ScreenTitle
 import com.healthtracker.app.ui.components.SectionHeader
 import com.healthtracker.app.ui.components.TileGrid
 import com.healthtracker.app.ui.theme.App
+import androidx.compose.material.icons.rounded.AutoAwesome
 
 @Composable
 fun ReviewScreen(vm: HealthViewModel) {
@@ -43,6 +44,24 @@ fun ReviewScreen(vm: HealthViewModel) {
     ScreenScroll {
         ScreenTitle("Weekly review", "${Fmt.dayMonth(r.from)} – ${Fmt.dayMonth(r.to)}")
         Text(r.headline, style = MaterialTheme.typography.titleLarge, color = c.ink)
+
+        if (s.coachKey.isNotBlank() && s.coachEnabled) {
+            val busy by vm.coachBusy.collectAsStateWithLifecycle()
+            val err by vm.coachError.collectAsStateWithLifecycle()
+            val cached = if (s.coachReviewDay == r.to.toEpochDay()) s.coachReview else ""
+            AppCard {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.AutoAwesome, null, tint = c.primary)
+                    Text("Coach's take", style = MaterialTheme.typography.titleMedium, color = c.ink)
+                }
+                when {
+                    cached.isNotBlank() -> Text(cached, style = MaterialTheme.typography.bodyLarge, color = c.ink)
+                    busy -> Text("Coach is writing your review…", style = MaterialTheme.typography.bodyMedium, color = c.ink2)
+                    else -> com.healthtracker.app.ui.components.SecondaryButton("Ask Coach to review my week", onClick = { vm.loadWeeklyReview() })
+                }
+                err?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = c.coral) }
+            }
+        }
 
         val tiles = mutableListOf(
             Triple("Weight trend", r.weightChange?.let { "${Fmt.signedKg(it)} kg" } ?: "—",

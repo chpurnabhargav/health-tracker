@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.MonitorWeight
 import androidx.compose.material.icons.rounded.Restaurant
@@ -105,6 +106,7 @@ private val tabs = listOf(
     Tab("weight", "Weight", Icons.Rounded.MonitorWeight),
     Tab("food", "Food", Icons.Rounded.Restaurant),
     Tab("review", "Review", Icons.Rounded.Insights),
+    Tab("coach", "Coach", Icons.Rounded.AutoAwesome),
     Tab("plan", "Plan", Icons.Rounded.Tune),
 )
 
@@ -162,7 +164,8 @@ private fun MainScaffold(vm: HealthViewModel, requestedTab: MutableState<String?
             }
             composable("sos") { com.healthtracker.app.ui.screens.SosScreen(vm, onDone = { if (!nav.popBackStack()) nav.goTab("today") }) }
             composable("weight") { WeightScreen(vm) }
-            composable("food") { FoodScreen(vm, onAddFood = { nav.navigate("addfood") }) }
+            composable("food") { FoodScreen(vm, onAddFood = { nav.navigate("addfood") }, onOpenCoach = { nav.goTab("coach") }) }
+            composable("coach") { com.healthtracker.app.ui.screens.CoachScreen(vm) }
             composable("review") { ReviewScreen(vm) }
             composable("plan") { PlanScreen(vm) }
             composable("addfood") { AddFoodScreen(vm, onDone = { nav.popBackStack() }) }
@@ -192,7 +195,7 @@ private fun FloatingNav(route: String?, onSelect: (String) -> Unit) {
         ) {
             tabs.forEach { t ->
                 val sel = route == t.route
-                val w by animateDpAsState(if (sel) 104.dp else 52.dp, label = "tab")
+                val w by animateDpAsState(if (sel) 100.dp else 48.dp, label = "tab")
                 Row(
                     Modifier
                         .height(52.dp)

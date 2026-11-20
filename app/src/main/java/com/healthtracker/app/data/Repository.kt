@@ -57,6 +57,45 @@ class HealthRepository(val dao: HealthDao, val settings: SettingsRepository, pri
 
     suspend fun deleteFood(id: Long) = dao.deleteFood(id)
 
+    /** Logs several items at once at [time] (used by typed logging, meal ideas and repeat). */
+    suspend fun logItems(items: List<com.healthtracker.app.domain.ParsedItem>, time: Long) {
+        val day = java.time.Instant.ofEpochMilli(time).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toEpochDay()
+        items.filter { it.name != null }.forEachIndexed { i, it ->
+            dao.insertFood(
+                FoodEntry(
+                    day = day, time = time + i, name = it.name!!, servings = it.servings,
+                    kcal = (it.kcal * it.servings).roundToInt(), protein = it.protein * it.servings,
+                    carbs = it.carbs * it.servings, fat = it.fat * it.servings, junk = it.junk,
+                )
+            )
+            val existing = dao.myFoodByName(it.name)
+            if (existing != null) dao.upsertMyFood(existing.copy(uses = existing.uses + 1, lastUsed = now()))
+            else if (it.estimated) dao.upsertMyFood(MyFood(name = it.name, serving = it.serving, kcal = it.kcal, protein = it.protein, carbs = it.carbs, fat = it.fat, junk = it.junk, uses = 1, lastUsed = now()))
+        }
+        onChange()
+    }
+
+    /** Copies the entries of one meal from yesterday into today's same meal. */
+    suspend fun repeatYesterday(meal: com.healthtracker.app.domain.Meal): Int {
+        val y = today() - 1
+        val src = dao.allFood().filter { it.day == y && com.healthtracker.app.domain.Meal.of(it.time) == meal }
+        val t = meal.timeOn(java.time.LocalDate.now())
+        src.forEachIndexed { i, e -> dao.insertFood(e.copy(id = 0, day = today(), time = t + i)) }
+        return src.size
+    }
+
+    /** Saves a meal's entries as one reusable food, like "My thali". */
+    suspend fun saveCombo(name: String, entries: List<FoodEntry>) {
+        if (entries.isEmpty()) return
+        dao.upsertMyFood(
+            (dao.myFoodByName(name) ?: MyFood(name = name, serving = "1 combo", kcal = 0, protein = 0.0, carbs = 0.0, fat = 0.0, junk = false)).copy(
+                serving = entries.joinToString(" + ") { e -> (if (e.servings != 1.0) "${Fmt.one(e.servings).removeSuffix(".0")} " else "") + e.name },
+                kcal = entries.sumOf { it.kcal }, protein = entries.sumOf { it.protein }, carbs = entries.sumOf { it.carbs },
+                fat = entries.sumOf { it.fat }, junk = entries.any { it.junk }, uses = 5, lastUsed = now(),
+            )
+        )
+    }
+
     suspend fun saveMyFood(f: MyFood) = dao.upsertMyFood(f)
 
     suspend fun deleteMyFood(id: Long) = dao.deleteMyFood(id)

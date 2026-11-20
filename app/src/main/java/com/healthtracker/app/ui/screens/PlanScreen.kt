@@ -70,7 +70,7 @@ import java.time.LocalDate
 
 private enum class Edit {
     NAME, BIRTHDAY, SEX, HEIGHT, START, ACTIVITY, PACE, GOAL_KG, GOAL_NAME, GOAL_DATE, CALORIES,
-    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE, GLASS, LOCK_START, LOCK_END,
+    WEIGH_TIME, WATER_START, WATER_END, WATER_EVERY, MESSAGE, WAIT, APPS, IMPORT, MODE, ORDER_VALUE, GLASS, LOCK_START, LOCK_END, COACH_KEY, COACH_LIMIT, COACH_MODEL,
 }
 
 @Composable
@@ -197,6 +197,10 @@ fun PlanScreen(vm: HealthViewModel) {
                 vm.updateSettings { it.copy(mealRemind = v) }
             }
             HairlineDivider()
+            ToggleRow("Protein check", "4:30 PM, only if you're under half your protein target", s.proteinNudge) { v ->
+                vm.updateSettings { it.copy(proteinNudge = v) }
+            }
+            HairlineDivider()
             ToggleRow("Weekly review", "Sunday 9 AM", s.weeklyRemind) { v -> vm.updateSettings { it.copy(weeklyRemind = v) } }
         }
 
@@ -244,6 +248,23 @@ fun PlanScreen(vm: HealthViewModel) {
                 ctx.startActivity(Intent(ctx, PauseActivity::class.java))
             })
             Spacer(Modifier.padding(4.dp))
+        }
+
+        AppCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 12.dp), spacing = 0.dp) {
+            SectionHeader("Coach (AI)")
+            if (s.coachKey.isBlank()) {
+                Text("Not set up yet. Open the Coach tab to add your free Gemini key.", style = MaterialTheme.typography.bodyMedium, color = c.ink2, modifier = Modifier.padding(vertical = 8.dp))
+            } else {
+                ToggleRow("Coach", "Only a short summary of your app data is sent with each question", s.coachEnabled) { v ->
+                    vm.updateSettings { it.copy(coachEnabled = v) }
+                }
+                HairlineDivider()
+                ValueRow("API key", "•••• " + s.coachKey.takeLast(4), sub = "Saved only on this phone", onClick = { edit = Edit.COACH_KEY })
+                HairlineDivider()
+                ValueRow("Daily limit", "${s.coachDailyLimit} questions", sub = "Keeps your free quota lasting. Tips and reviews count too.", onClick = { edit = Edit.COACH_LIMIT })
+                HairlineDivider()
+                ValueRow("Model", s.coachModel.ifBlank { "Automatic" }, sub = s.coachWorkingModel.takeIf { it.isNotBlank() }?.let { "Last used: $it" }, onClick = { edit = Edit.COACH_MODEL })
+            }
         }
 
         AppCard {
@@ -323,6 +344,19 @@ fun PlanScreen(vm: HealthViewModel) {
             help = "Leave it empty to use \"No ${s.displayName}, not till ${s.goalName}.\"",
             onDismiss = close,
         ) { v -> vm.updateSettings { it.copy(customPauseMessage = v.ifBlank { null }) }; close() }
+        Edit.COACH_KEY -> TextDialog(
+            "Gemini API key", "New key", "",
+            help = "Paste a new key from Google AI Studio. Leave it empty and save to remove the key from this phone.",
+            onDismiss = close,
+        ) { v -> vm.updateSettings { it.copy(coachKey = v.trim()) }; close() }
+        Edit.COACH_LIMIT -> OptionsDialog("Coach questions per day", listOf(10, 25, 50, 100), s.coachDailyLimit, { "$it a day" }, onDismiss = close) { v ->
+            vm.updateSettings { it.copy(coachDailyLimit = v) }; close()
+        }
+        Edit.COACH_MODEL -> TextDialog(
+            "Gemini model", "Model name", s.coachModel,
+            help = "Leave empty for automatic (the app tries current Flash models). Or enter one from Google AI Studio, like gemini-2.5-flash.",
+            onDismiss = close,
+        ) { v -> vm.updateSettings { it.copy(coachModel = v.trim(), coachWorkingModel = "") }; close() }
         Edit.LOCK_START -> TimeDialog("Lockdown starts", s.lockStartMin, onDismiss = close) { v -> vm.updateSettings { it.copy(lockStartMin = v) }; close() }
         Edit.LOCK_END -> TimeDialog("Lockdown ends", s.lockEndMin, onDismiss = close) { v -> vm.updateSettings { it.copy(lockEndMin = v) }; close() }
         Edit.GLASS -> OptionsDialog("Glass size", listOf(150, 200, 250, 300, 350, 400, 500, 750, 1000), s.glassMl, { "$it ml" }, onDismiss = close) { v ->

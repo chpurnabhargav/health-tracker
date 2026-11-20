@@ -16,6 +16,7 @@ object ReminderScheduler {
     const val T_WEIGH_FOLLOW = 3
     const val T_MEAL = 4
     const val T_WEEKLY = 5
+    const val T_PROTEIN = 6
 
     /** Minute of day and meal name. */
     val mealTimes = listOf(10 * 60 to "breakfast", 14 * 60 + 30 to "lunch", 21 * 60 + 30 to "dinner")
@@ -27,6 +28,7 @@ object ReminderScheduler {
         set(ctx, T_WEIGH_FOLLOW, if (on && s.weighRemind) nextAt(now, (s.weighMin + 150).coerceAtMost(23 * 60)) else null)
         set(ctx, T_MEAL, if (on && s.mealRemind) nextMeal(now) else null)
         set(ctx, T_WEEKLY, if (on && s.weeklyRemind) nextWeekly(now) else null)
+        set(ctx, T_PROTEIN, if (on && s.proteinNudge) nextAt(now, 16 * 60 + 30) else null)
     }
 
     /** Moves the next water reminder to [minutes] from now. */

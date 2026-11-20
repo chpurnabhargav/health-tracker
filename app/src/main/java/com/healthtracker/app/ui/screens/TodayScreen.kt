@@ -71,6 +71,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
@@ -136,6 +137,7 @@ fun TodayScreen(vm: HealthViewModel, onAddFood: () -> Unit, onOpenTab: (String) 
 
         GoalCard(h, onOpenTab)
         SosCard(h.s.cravingWins, onSos)
+        CoachTipCard(h, vm, onOpenTab)
         MinimumDayCard(h, vm)
         WeightCard(h, vm, onOpenTab)
         CaloriesCard(h, onAddFood, onOpenTab)
@@ -207,6 +209,32 @@ private fun GoalCard(h: HealthState, onOpenTab: (String) -> Unit) {
             Chip("${h.loggedLast7}/7 days logged", c.water)
             Chip("BMI ${Fmt.one(h.bmiNow)}", c.data)
         }
+    }
+}
+
+@Composable
+private fun CoachTipCard(h: HealthState, vm: HealthViewModel, onOpenTab: (String) -> Unit) {
+    val c = App.colors
+    val ready = h.s.coachKey.isNotBlank() && h.s.coachEnabled
+    LaunchedEffect(ready, h.todayDay) { if (ready) vm.loadDailyTip() }
+    AppCard(onClick = { onOpenTab("coach") }) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                Modifier.size(32.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(c.data, c.water))),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Rounded.AutoAwesome, null, tint = c.onPrimary, modifier = Modifier.size(18.dp)) }
+            Text(if (ready) "Coach's tip for today" else "Meet Coach, your AI assistant", style = MaterialTheme.typography.titleMedium, color = c.ink)
+        }
+        val tip = if (h.s.coachTipDay == h.todayDay) h.s.coachTip else ""
+        Text(
+            when {
+                !ready -> "Ask anything about your food, weight and habits, and get answers from your own data. Tap to set it up."
+                tip.isNotBlank() -> tip
+                else -> "Getting today's tip…"
+            },
+            style = MaterialTheme.typography.bodyLarge, color = c.ink,
+        )
+        if (ready) Text("Tap to ask Coach anything", style = MaterialTheme.typography.bodySmall, color = c.ink2)
     }
 }
 

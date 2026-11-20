@@ -111,6 +111,94 @@ class HealthViewModel(app: Application) : AndroidViewModel(app) {
     fun addCustomFood(name: String, serving: String, kcal: Int, p: Double, carbs: Double, fat: Double, junk: Boolean, servings: Double) =
         viewModelScope.launch { c.repo.addFood(name, servings, kcal, p, carbs, fat, junk, serving = serving) }
 
+    /** Meal to preselect when opening Add food. */
+    val pendingMeal = MutableStateFlow<com.healthtracker.app.domain.Meal?>(null)
+
+    // ---- Coach ----
+    private val _coachBusy = MutableStateFlow(false)
+    val coachBusy: StateFlow<Boolean> = _coachBusy.asStateFlow()
+    private val _coachError = MutableStateFlow<String?>(null)
+    val coachError: StateFlow<String?> = _coachError.asStateFlow()
+
+    private suspend fun <T> coachCall(block: suspend () -> T): T? {
+        _coachBusy.value = true
+        _coachError.value = null
+        return try {
+            block()
+        } catch (e: com.healthtracker.app.coach.CoachError) {
+            _coachError.value = e.userMessage; null
+        } catch (e: Exception) {
+            _coachError.value = "Coach hit a problem. Try again."; null
+        } finally {
+            _coachBusy.value = false
+        }
+    }
+
+    fun askCoach(question: String) = viewModelScope.launch {
+        val h = state.value ?: return@launch
+        coachCall { c.coach.ask(h, question) }
+    }
+
+    fun clearCoachError() { _coachError.value = null }
+    fun clearCoachChat() = viewModelScope.launch { c.coach.clearHistory() }
+
+    fun loadDailyTip() = viewModelScope.launch {
+        val h = state.value ?: return@launch
+        if (h.s.coachKey.isBlank() || !h.s.coachEnabled) return@launch
+        if (h.s.coachTipDay == h.todayDay && h.s.coachTip.isNotBlank()) return@launch
+        runCatching { c.coach.dailyTip(h) }
+    }
+
+    fun loadWeeklyReview() = viewModelScope.launch {
+        val h = state.value ?: return@launch
+        coachCall { c.coach.weeklyReview(h) }
+    }
+
+    suspend fun testCoachKey(key: String): String? = try {
+        c.coach.testKey(key); null
+    } catch (e: com.healthtracker.app.coach.CoachError) {
+        e.userMessage
+    } catch (e: Exception) {
+        "Couldn't check the key."
+    }
+
+    suspend fun estimateFoods(items: List<com.healthtracker.app.domain.ParsedItem>): List<com.healthtracker.app.domain.ParsedItem>? {
+        val h = state.value ?: return null
+        return coachCall { c.coach.estimate(h, items) }
+    }
+
+    // ---- Faster logging ----
+    fun logItems(items: List<com.healthtracker.app.domain.ParsedItem>, meal: com.healthtracker.app.domain.Meal) = viewModelScope.launch {
+        c.repo.logItems(items, meal.timeOn(LocalDate.now()))
+        val s = c.settings.current()
+        val logged = items.filter { it.name != null }.map {
+            FoodEntry(day = 0, time = 0, name = it.name!!, servings = it.servings, kcal = (it.kcal * it.servings).toInt(),
+                protein = it.protein * it.servings, carbs = it.carbs * it.servings, fat = it.fat * it.servings, junk = it.junk)
+        }
+        val fb = com.healthtracker.app.domain.MealFeedback.forMeal(logged, s.displayName, com.healthtracker.app.domain.Calc.proteinTarget(s.heightCm))
+        _message.value = "Logged ${logged.size} item${if (logged.size == 1) "" else "s"} · ${logged.sumOf { it.kcal }} kcal" + (fb?.let { ". $it" } ?: "")
+    }
+
+    fun repeatYesterday(meal: com.healthtracker.app.domain.Meal) = viewModelScope.launch {
+        val n = c.repo.repeatYesterday(meal)
+        _message.value = if (n == 0) "Nothing logged for ${meal.label.lowercase()} yesterday." else "Copied yesterday's ${meal.label.lowercase()} ($n items)."
+    }
+
+    fun saveCombo(name: String, entries: List<FoodEntry>) = viewModelScope.launch {
+        c.repo.saveCombo(name, entries)
+        _message.value = "Saved \"$name\" to your foods."
+    }
+
+    fun planMeal(day: Long, meal: com.healthtracker.app.domain.Meal, ideaId: String?) = updateSettings { s ->
+        val root = runCatching { org.json.JSONObject(s.mealPlan) }.getOrDefault(org.json.JSONObject())
+        val today = LocalDate.now().toEpochDay()
+        root.keys().asSequence().toList().forEach { k -> if ((k.toLongOrNull() ?: 0) < today) root.remove(k) }
+        val d = root.optJSONObject(day.toString()) ?: org.json.JSONObject()
+        if (ideaId == null) d.remove(meal.name) else d.put(meal.name, ideaId)
+        root.put(day.toString(), d)
+        s.copy(mealPlan = root.toString())
+    }
+
     fun cravingBeaten() = updateSettings { it.copy(cravingWins = it.cravingWins + 1) }
 
     fun dismissRecalcNotice() = updateSettings { it.copy(recalcNotice = null) }

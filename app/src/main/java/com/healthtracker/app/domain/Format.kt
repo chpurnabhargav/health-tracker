@@ -58,5 +58,7 @@ object Fmt {
     fun weekday(d: LocalDate): String = d.format(weekday)
     fun weekdayLong(d: LocalDate): String = d.format(weekdayLong)
 
+    fun pct(x: Double): String = "${(x * 100).roundToInt()}%"
+
     fun parseNumber(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
 }

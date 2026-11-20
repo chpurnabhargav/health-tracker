@@ -17,6 +17,7 @@ class AppContainer(app: Application) {
     val settings = SettingsRepository(app) { com.healthtracker.app.widget.HealthWidget.refresh(app) }
     val repo = HealthRepository(db.dao(), settings) { com.healthtracker.app.widget.HealthWidget.refresh(app) }
     val health = HealthConnectManager(app)
+    val coach = com.healthtracker.app.coach.Coach(settings)
 }
 
 class HealthApp : Application() {

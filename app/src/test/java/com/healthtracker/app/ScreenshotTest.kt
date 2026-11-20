@@ -85,6 +85,9 @@ class ScreenshotTest {
                 goalDay = Calc.nextBirthday(birthday.toEpochDay(), today).toEpochDay(),
                 goalStartDay = start.toEpochDay(), goalStartKg = 104.0, waterGoalMl = 3500, stepGoal = 8000,
                 plannedMealsPerWeek = 1,
+                coachKey = "test-key-0000000000000000000000", coachTipDay = today.toEpochDay(),
+                coachTip = "You're 50 g short on protein most days. Add 2 boiled eggs to breakfast and curd with dinner today.",
+                coachChat = """[{"role":"user","text":"Am I eating too many carbs?"},{"role":"model","text":"Bhargav, a bit, yes. Over the last 7 days about 55% of your calories came from carbs, mostly roti, rice and poha. Protein averaged 72 g against your 130 g target.\n- Swap one roti at dinner for 2 eggs or a bowl of curd\n- Have dal or chicken with lunch every day\nThat alone adds about 30 g protein and keeps you fuller."}]""",
             )
         }
 
@@ -189,6 +192,17 @@ class ScreenshotTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/8-pause.png")
         compose.mainClock.advanceTimeBy(31_000)
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/9-pause-unlocked.png")
+    }
+
+    @Test
+    @Config(qualifiers = "w412dp-h915dp-xhdpi")
+    fun s14_coachChat() = shot("14-coach-chat") { com.healthtracker.app.ui.screens.CoachScreen(vm) }
+
+    @Test
+    @Config(qualifiers = "w412dp-h1400dp-xhdpi")
+    fun s15_coachSetup() {
+        runBlocking { app.container.settings.update { it.copy(coachKey = "") } }
+        shot("15-coach-setup") { com.healthtracker.app.ui.screens.CoachScreen(vm) }
     }
 
     @Test

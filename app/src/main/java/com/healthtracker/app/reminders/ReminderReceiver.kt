@@ -111,6 +111,12 @@ class ReminderReceiver : BroadcastReceiver() {
                         if (!c.repo.foodLoggedSince(threeHours)) Notifications.meal(ctx, ReminderScheduler.mealFor(ZonedDateTime.now()))
                     }
                     ReminderScheduler.T_WEEKLY -> Notifications.weekly(ctx)
+                    ReminderScheduler.T_PROTEIN -> {
+                        val today = LocalDate.now().toEpochDay()
+                        val have = c.db.dao().allFood().filter { it.day == today }.sumOf { it.protein }
+                        val target = Calc.proteinTarget(s.heightCm)
+                        if (have < target * 0.5) Notifications.protein(ctx, s.displayName, have.toInt(), target)
+                    }
                 }
                 ReminderScheduler.scheduleAll(ctx, s)
                 com.healthtracker.app.widget.HealthWidget.refresh(ctx)
